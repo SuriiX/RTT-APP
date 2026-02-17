@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../widgets/rtt_drawer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,24 +22,28 @@ class _HomePageState extends State<HomePage> {
 
   // Datos reales
   final String phoneNumber = '934661819';
-  final String whatsappNumber = '34645212121'; // +34 646 21 21 21 (sin + ni espacios)
+  final String whatsappNumber = '34646212121'; // +34 646 21 21 21 (sin + ni espacios)
 
   @override
   void initState() {
     super.initState();
     future = api.getMap(Endpoints.home());
-    _autoStartPlayer();
+    _initPlayer();
   }
 
-  // En Android/iOS iniciará; en Web puede fallar por política de autoplay del navegador.
-  Future<void> _autoStartPlayer() async {
+  // Inicia el streaming una vez, y hace autoplay SOLO en Android/iOS (web lo bloquea)
+  Future<void> _initPlayer() async {
     try {
       final settings = await api.getMap(Endpoints.settings());
       final url = (settings['streaming']?['url'] as String?) ?? '';
       await AudioController.instance.ensureInit(url);
-      await AudioController.instance.play();
+
+      // Autoplay: solo nativo (web suele bloquear por política del navegador)
+      if (!kIsWeb) {
+        await AudioController.instance.play();
+      }
     } catch (e) {
-      debugPrint('Autoplay error: $e');
+      debugPrint('Init player error: $e');
     }
   }
 
@@ -52,11 +58,62 @@ class _HomePageState extends State<HomePage> {
     return Uri.encodeFull(u);
   }
 
+  /// Render de imagen compatible:
+  /// - Web: Image.network (usa <img> y evita muchos bloqueos tipo statusCode 0)
+  /// - Mobile: CachedNetworkImage (cache normal)
+  Widget _netImage({
+    required String url,
+    double? height,
+    double? width,
+    BoxFit fit = BoxFit.cover,
+    BorderRadius? borderRadius,
+  }) {
+    final safe = _safeUrl(url);
+
+    final imgWidget = kIsWeb
+        ? Image.network(
+            safe,
+            height: height,
+            width: width,
+            fit: fit,
+            errorBuilder: (context, error, stack) {
+              debugPrint('❌ Imagen no carga (web): $url | $error');
+              return Container(
+                height: height,
+                width: width,
+                color: Colors.black12,
+                alignment: Alignment.center,
+                child: const Icon(Icons.image_not_supported),
+              );
+            },
+          )
+        : CachedNetworkImage(
+            imageUrl: safe,
+            height: height,
+            width: width,
+            fit: fit,
+            errorWidget: (_, __, ___) => Container(
+              height: height,
+              width: width,
+              color: Colors.black12,
+              alignment: Alignment.center,
+              child: const Icon(Icons.image_not_supported),
+            ),
+          );
+
+    if (borderRadius != null) {
+      return ClipRRect(borderRadius: borderRadius, child: imgWidget);
+    }
+    return imgWidget;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const RttDrawer(), // ✅ hambur visible
       backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
+        automaticallyImplyLeading: true,
         title: const Text('RadioTeleTaxi'),
         actions: [
           IconButton(
@@ -146,7 +203,7 @@ class _HomePageState extends State<HomePage> {
 
                   _newsList(actualidad),
 
-                  const SizedBox(height: 90), // espacio para el mini-player
+                  const SizedBox(height: 90), // espacio mini-player
                 ],
               ),
 
@@ -168,10 +225,11 @@ class _HomePageState extends State<HomePage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          CachedNetworkImage(
-            imageUrl: _safeUrl(imageUrl),
+          _netImage(
+            url: imageUrl,
+            height: 320,
+            width: double.infinity,
             fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(color: Colors.black12),
           ),
           Container(color: const Color(0xAAE53935)),
           Padding(
@@ -277,23 +335,12 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (img.trim().isNotEmpty)
-                  ClipRRect(
+                  _netImage(
+                    url: img,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Image.network(
-                      _safeUrl(img),
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stack) {
-                        debugPrint('❌ Imagen no carga: $img | $error');
-                        return Container(
-                          height: 180,
-                          color: Colors.black12,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.image_not_supported),
-                        );
-                      },
-                    ),
                   ),
                 Padding(
                   padding: const EdgeInsets.all(16),
