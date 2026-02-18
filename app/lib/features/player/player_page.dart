@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../widgets/rtt_scaffold.dart';
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -18,11 +20,9 @@ class _PlayerPageState extends State<PlayerPage> {
 
   // Datos reales
   final String phoneNumber = '934661819';
-  final String whatsappNumber = '34645212121';
+  final String whatsappNumber = '34646212121';
 
   bool loading = true;
-  bool liked = false;
-
   Map<String, dynamic>? settings;
   List<dynamic> directo = const [];
 
@@ -51,10 +51,22 @@ class _PlayerPageState extends State<PlayerPage> {
         directo = d;
         loading = false;
       });
+
+      // Actualiza el título del mini-player (programa)
+      final dm = _directoMap;
+      final programa = (dm?['programa'] ?? 'Radio TeleTaxi').toString();
+      AudioController.instance.setProgramTitle(programa);
     } catch (e) {
-      setState(() => loading = false);
       debugPrint('Player load error: $e');
+      setState(() => loading = false);
     }
+  }
+
+  Map<String, dynamic>? get _directoMap {
+    if (directo.isNotEmpty && directo.first is Map) {
+      return directo.first as Map<String, dynamic>;
+    }
+    return null;
   }
 
   Future<void> _call() async {
@@ -65,200 +77,133 @@ class _PlayerPageState extends State<PlayerPage> {
     await launchUrl(Uri.parse('https://wa.me/$whatsappNumber'), mode: LaunchMode.externalApplication);
   }
 
-  // (Sin share_plus por ahora) -> placeholder
-  void _sharePlaceholder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Compartir: pendiente')),
-    );
-  }
-
-  Map<String, dynamic>? get _directoMap {
-    if (directo.isNotEmpty && directo.first is Map) return directo.first as Map<String, dynamic>;
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final d = _directoMap;
 
-    final hora = '${d?['hora_inicio'] ?? ''} a ${d?['hora_fi_real'] ?? ''}'.trim();
+    final horaIni = (d?['hora_inicio'] ?? '').toString();
+    final horaFin = (d?['hora_fi_real'] ?? '').toString();
+    final hora = (horaIni.isNotEmpty && horaFin.isNotEmpty) ? 'De $horaIni a $horaFin' : '';
+
     final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
     final presentador = (d?['presentador'] ?? '').toString();
 
     final imgPresentador = (d?['imagen_presentador'] ?? '').toString().trim();
-    final coverFallback = (settings?['streaming']?['cover'] ?? Endpoints.cover()).toString();
+    final coverFallback = (settings?['streaming']?['cover'] ?? Endpoints.cover()).toString().trim();
 
     final avatarUrl = imgPresentador.isNotEmpty ? imgPresentador : coverFallback;
 
-    return SafeArea(
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              _topBar(context),
-              Expanded(
-                child: loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(18, 28, 18, 90),
-                        child: Column(
-                          children: [
-                            _avatar(avatarUrl),
-                            const SizedBox(height: 18),
+    return RttScaffold(
+      title: 'RadioTeleTaxi',
+      actions: [
+        IconButton(
+          tooltip: 'Home',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => context.go('/'),
+        ),
+      ],
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 28, 18, 20),
+              child: Column(
+                children: [
+                  _avatar(avatarUrl),
+                  const SizedBox(height: 18),
 
-                            if (hora.replaceAll('a', '').trim().isNotEmpty)
-                              Text(
-                                'De $hora h',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFFE53935),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-
-                            const SizedBox(height: 6),
-                            Text(
-                              programa,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w300,
-                                color: Colors.black87,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-
-                            if (presentador.trim().isNotEmpty)
-                              Text(
-                                presentador,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Color(0xFFE53935),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-
-                            const SizedBox(height: 22),
-
-                            // Botón play/pause grande (no estaba muy explícito en la captura,
-                            // pero es clave para UX)
-                            AnimatedBuilder(
-                              animation: AudioController.instance,
-                              builder: (context, _) {
-                                final playing = AudioController.instance.isPlaying;
-                                return SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: Colors.black,
-                                      side: const BorderSide(color: Color(0xFFE53935), width: 1.5),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                    onPressed: () => AudioController.instance.toggle(),
-                                    icon: Icon(
-                                      playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                                      color: const Color(0xFFE53935),
-                                    ),
-                                    label: Text(
-                                      playing ? 'PAUSAR DIRECTO' : 'ESCUCHAR DIRECTO',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            // Acciones (igual a tu captura)
-                            _actionButton(
-                              icon: Icons.phone,
-                              text: 'Llamar en directo',
-                              color: const Color(0xFF4A4A4A),
-                              onTap: _call,
-                            ),
-                            _actionButton(
-                              icon: Icons.chat,
-                              text: 'Whatsapp',
-                              color: const Color(0xFF25D366),
-                              onTap: _openWhatsapp,
-                            ),
-                          ],
-                        ),
+                  if (hora.isNotEmpty)
+                    Text(
+                      '$hora h',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFFE53935),
+                        fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  const SizedBox(height: 6),
+                  Text(
+                    programa,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 6),
+                  if (presentador.trim().isNotEmpty)
+                    Text(
+                      presentador,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFFE53935),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  const SizedBox(height: 22),
+
+                  // Play/Pause grande sincronizado
+                  AnimatedBuilder(
+                    animation: AudioController.instance,
+                    builder: (context, _) {
+                      final ctrl = AudioController.instance;
+                      final playing = ctrl.isPlaying;
+
+                      return SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => ctrl.toggle(),
+                          icon: Icon(
+                            playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                            color: const Color(0xFFE53935),
+                            size: 26,
+                          ),
+                          label: Text(
+                            playing ? 'PAUSAR DIRECTO' : 'ESCUCHAR DIRECTO',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  _actionButton(
+                    icon: Icons.phone,
+                    text: 'Llamar en directo',
+                    color: const Color(0xFF4A4A4A),
+                    onTap: _call,
+                  ),
+
+                  _actionButton(
+                    icon: Icons.chat,
+                    text: 'Whatsapp',
+                    color: const Color(0xFF25D366),
+                    onTap: _openWhatsapp,
+                  ),
+                ],
               ),
-            ],
-          ),
-
-          // Mini-player fijo abajo (como en Home)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _miniPlayer(programa),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _topBar(BuildContext context) {
-    return Container(
-      height: 56,
-      color: const Color(0xFFE53935),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              // Abre el drawer del Scaffold padre (Shell)
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-          const SizedBox(width: 6),
-
-          // Logo circular (placeholder)
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
             ),
-            alignment: Alignment.center,
-            child: const Text('RTT', style: TextStyle(color: Color(0xFFE53935), fontWeight: FontWeight.bold, fontSize: 11)),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'RadioTeleTaxi',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-
-          IconButton(
-            icon: Icon(liked ? Icons.favorite : Icons.favorite_border, color: Colors.white),
-            onPressed: () => setState(() => liked = !liked),
-          ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.white),
-            onPressed: _sharePlaceholder,
-          ),
-        ],
-      ),
     );
   }
 
   Widget _avatar(String url) {
     return Container(
-      width: 130,
-      height: 130,
+      width: 140,
+      height: 140,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFFE53935), width: 3),
@@ -300,55 +245,6 @@ class _PlayerPageState extends State<PlayerPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _miniPlayer(String programa) {
-    return AnimatedBuilder(
-      animation: AudioController.instance,
-      builder: (context, _) {
-        final ctrl = AudioController.instance;
-        final playing = ctrl.isPlaying;
-
-        return Material(
-          elevation: 10,
-          child: Container(
-            height: 64,
-            color: const Color(0xFFE53935),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () => ctrl.toggle(),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    color: const Color(0xFFB71C1C),
-                    child: Icon(
-                      playing ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ESCÚCHANOS EN DIRECTO',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      Text(programa, style: const TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

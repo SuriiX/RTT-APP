@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/audio/audio_controller.dart';
-import '../../widgets/rtt_drawer.dart';
+import '../../widgets/rtt_scaffold.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
 
   // Datos reales
   final String phoneNumber = '934661819';
-  final String whatsappNumber = '34646212121'; // +34 646 21 21 21 (sin + ni espacios)
+  final String whatsappNumber = '34646212121';
 
   @override
   void initState() {
@@ -31,14 +31,13 @@ class _HomePageState extends State<HomePage> {
     _initPlayer();
   }
 
-  // Inicia el streaming una vez, y hace autoplay SOLO en Android/iOS (web lo bloquea)
   Future<void> _initPlayer() async {
     try {
       final settings = await api.getMap(Endpoints.settings());
       final url = (settings['streaming']?['url'] as String?) ?? '';
       await AudioController.instance.ensureInit(url);
 
-      // Autoplay: solo nativo (web suele bloquear por política del navegador)
+      // Autoplay: solo nativo (web suele bloquear autoplay)
       if (!kIsWeb) {
         await AudioController.instance.play();
       }
@@ -58,76 +57,70 @@ class _HomePageState extends State<HomePage> {
     return Uri.encodeFull(u);
   }
 
-  /// Render de imagen compatible:
-  /// - Web: Image.network (usa <img> y evita muchos bloqueos tipo statusCode 0)
-  /// - Mobile: CachedNetworkImage (cache normal)
-  Widget _netImage({
+  /// Imagen PRO:
+  /// - Fondo: cover (llena, sirve de “cover”)
+  /// - Encima: contain (imagen completa sin recorte)
+  /// - Overlay suave para que no se vea “cruda”
+  Widget _proImage({
     required String url,
-    double? height,
+    required double height,
     double? width,
-    BoxFit fit = BoxFit.cover,
     BorderRadius? borderRadius,
   }) {
-    final safe = _safeUrl(url);
+    final u = _safeUrl(url);
 
-    final imgWidget = kIsWeb
-        ? Image.network(
-            safe,
-            height: height,
-            width: width,
-            fit: fit,
-            errorBuilder: (context, error, stack) {
-              debugPrint('❌ Imagen no carga (web): $url | $error');
-              return Container(
-                height: height,
-                width: width,
+    Widget img = SizedBox(
+      height: height,
+      width: width ?? double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Fondo (cover)
+          CachedNetworkImage(
+            imageUrl: u,
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) => Container(color: Colors.black12),
+          ),
+          // Overlay suave (simula blur/estilo)
+          Container(color: Colors.black.withOpacity(0.18)),
+          // Imagen real (contain, sin recortar)
+          Center(
+            child: CachedNetworkImage(
+              imageUrl: u,
+              fit: BoxFit.contain,
+              errorWidget: (_, __, ___) => Container(
                 color: Colors.black12,
                 alignment: Alignment.center,
                 child: const Icon(Icons.image_not_supported),
-              );
-            },
-          )
-        : CachedNetworkImage(
-            imageUrl: safe,
-            height: height,
-            width: width,
-            fit: fit,
-            errorWidget: (_, __, ___) => Container(
-              height: height,
-              width: width,
-              color: Colors.black12,
-              alignment: Alignment.center,
-              child: const Icon(Icons.image_not_supported),
+              ),
             ),
-          );
+          ),
+        ],
+      ),
+    );
 
     if (borderRadius != null) {
-      return ClipRRect(borderRadius: borderRadius, child: imgWidget);
+      img = ClipRRect(borderRadius: borderRadius, child: img);
     }
-    return imgWidget;
+    return img;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: const RttDrawer(), // ✅ hambur visible
-      backgroundColor: const Color(0xFFF3F3F3),
-      appBar: AppBar(
-        automaticallyImplyLeading: true,
-        title: const Text('RadioTeleTaxi'),
-        actions: [
-          IconButton(
-            tooltip: 'Llamar',
-            icon: const Icon(Icons.phone),
-            onPressed: () => launchUrl(Uri.parse('tel:$phoneNumber'), mode: LaunchMode.externalApplication),
-          ),
-          IconButton(
-            tooltip: 'Directo',
-            icon: const Icon(Icons.play_circle_fill),
-            onPressed: () => context.go('/player'),
-          ),
-        ],
-      ),
+    return RttScaffold(
+      title: 'RadioTeleTaxi',
+      actions: [
+        IconButton(
+          tooltip: 'Llamar',
+          icon: const Icon(Icons.phone),
+          onPressed: () => launchUrl(Uri.parse('tel:$phoneNumber'), mode: LaunchMode.externalApplication),
+        ),
+        IconButton(
+          tooltip: 'Directo',
+          icon: const Icon(Icons.play_circle_fill),
+          onPressed: () => context.go('/player'),
+        ),
+      ],
       body: FutureBuilder<Map<String, dynamic>>(
         future: future,
         builder: (context, snap) {
@@ -144,7 +137,11 @@ class _HomePageState extends State<HomePage> {
 
           final d = (directo is List && directo.isNotEmpty) ? (directo.first as Map) : null;
 
-          // Imagen del hero (prioriza imagen_app_programa, luego imagen_reproductor_web, luego cover)
+          // Título en mini-player
+          final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
+          AudioController.instance.setProgramTitle(programa);
+
+          // Hero image (prioriza ACF app -> fondo reproductor -> cover)
           final heroImage = (() {
             final a = (d?['imagen_app_programa'] ?? '').toString().trim();
             if (a.isNotEmpty) return a;
@@ -153,61 +150,55 @@ class _HomePageState extends State<HomePage> {
             return Endpoints.cover();
           })();
 
-          return Stack(
+          return ListView(
+            padding: EdgeInsets.zero,
             children: [
-              ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _hero(context, d, heroImage),
+              _hero(context, d, heroImage),
 
-                  _actionButton(
-                    icon: Icons.phone,
-                    text: 'Llamar en directo',
-                    color: const Color(0xFF4A4A4A),
-                    onTap: () => launchUrl(Uri.parse('tel:$phoneNumber'), mode: LaunchMode.externalApplication),
-                  ),
-
-                  _actionButton(
-                    icon: Icons.chat,
-                    text: 'Whatsapp',
-                    color: const Color(0xFF25D366),
-                    onTap: _openWhatsapp,
-                  ),
-
-                  _actionButton(
-                    icon: Icons.schedule,
-                    text: 'Ver programación',
-                    color: const Color(0xFFE53935),
-                    onTap: () => context.go('/programacion'),
-                  ),
-
-                  _actionButton(
-                    icon: Icons.confirmation_num_outlined,
-                    text: 'Entradas',
-                    color: const Color(0xFF6BB6FF),
-                    onTap: () => context.go('/entradas'),
-                  ),
-
-                  const SizedBox(height: 24),
-                  const Center(
-                    child: Text(
-                      'ACTUALIDAD',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE53935),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _newsList(actualidad),
-
-                  const SizedBox(height: 90), // espacio mini-player
-                ],
+              _actionButton(
+                icon: Icons.phone,
+                text: 'Llamar en directo',
+                color: const Color(0xFF4A4A4A),
+                onTap: () => launchUrl(Uri.parse('tel:$phoneNumber'), mode: LaunchMode.externalApplication),
               ),
 
-              Positioned(left: 0, right: 0, bottom: 0, child: _miniPlayer(d)),
+              _actionButton(
+                icon: Icons.chat,
+                text: 'Whatsapp',
+                color: const Color(0xFF25D366),
+                onTap: _openWhatsapp,
+              ),
+
+              _actionButton(
+                icon: Icons.schedule,
+                text: 'Ver programación',
+                color: const Color(0xFFE53935),
+                onTap: () => context.go('/programacion'),
+              ),
+
+              _actionButton(
+                icon: Icons.confirmation_num_outlined,
+                text: 'Entradas',
+                color: const Color(0xFF6BB6FF),
+                onTap: () => context.go('/entradas'),
+              ),
+
+              const SizedBox(height: 24),
+              const Center(
+                child: Text(
+                  'ACTUALIDAD',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE53935),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _newsList(actualidad),
+
+              const SizedBox(height: 20),
             ],
           );
         },
@@ -220,18 +211,23 @@ class _HomePageState extends State<HomePage> {
     final hora = '${d?['hora_inicio'] ?? ''} - ${d?['hora_fi_real'] ?? ''}'.trim();
     final pres = (d?['presentador'] ?? '').toString();
 
+    // ✅ Más altura (estirado en vertical)
+    const heroHeight = 380.0;
+
     return SizedBox(
-      height: 320,
+      height: heroHeight,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _netImage(
+          // ✅ PRO image: fondo cover + imagen contain (sin recorte)
+          _proImage(
             url: imageUrl,
-            height: 320,
-            width: double.infinity,
-            fit: BoxFit.cover,
+            height: heroHeight,
           ),
-          Container(color: const Color(0xAAE53935)),
+
+          // overlay rojo como la app
+          Container(color: const Color(0x88E53935)),
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -267,7 +263,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -335,11 +331,9 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (img.trim().isNotEmpty)
-                  _netImage(
+                  _proImage(
                     url: img,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                    height: 220, // ✅ más alto que antes
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   ),
                 Padding(
@@ -361,60 +355,6 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 8),
                       Text(date, style: const TextStyle(color: Colors.black54)),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _miniPlayer(Map? d) {
-    final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
-
-    return AnimatedBuilder(
-      animation: AudioController.instance,
-      builder: (context, _) {
-        final ctrl = AudioController.instance;
-        final playing = ctrl.isPlaying;
-
-        return Material(
-          elevation: 10,
-          child: Container(
-            height: 64,
-            color: const Color(0xFFE53935),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () => ctrl.toggle(),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    color: const Color(0xFFB71C1C),
-                    child: Icon(
-                      playing ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => context.go('/player'),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'ESCÚCHANOS EN DIRECTO',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        Text(programa, style: const TextStyle(color: Colors.white70)),
-                      ],
-                    ),
                   ),
                 ),
               ],
