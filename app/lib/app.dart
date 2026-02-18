@@ -3,9 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import 'features/home/home_page.dart';
 import 'features/player/player_page.dart';
-import 'widgets/rtt_scaffold.dart';
 import 'features/programacion/programacion_page.dart';
 import 'features/frecuencias/frecuencias_page.dart';
+import 'features/entradas/entradas_page.dart';
+import 'features/actualidad/actualidad_page.dart';
+import 'features/actualidad/actualidad_detalle_page.dart';
+import 'widgets/rtt_scaffold.dart';
+import 'features/eventos/eventos_page.dart';
+import 'features/eventos/evento_detalle_page.dart';
+import 'features/settings/settings_page.dart';
+import 'features/settings/privacy_policy_page.dart';
 
 class RttApp extends StatelessWidget {
   RttApp({super.key});
@@ -19,11 +26,29 @@ class RttApp extends StatelessWidget {
 
       GoRoute(
         path: '/actualidad',
-        builder: (context, _) => const _SimplePage(title: 'Actualidad'),
+        builder: (context, _) => const ActualidadPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ActualidadDetallePage(postId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/eventos',
-        builder: (context, _) => const _SimplePage(title: 'Eventos'),
+        builder: (context, _) => const EventosPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return EventoDetallePage(eventId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/programacion',
@@ -31,15 +56,25 @@ class RttApp extends StatelessWidget {
       ),
       GoRoute(
         path: '/entradas',
-        builder: (context, _) => const _SimplePage(title: 'Entradas'),
+        builder: (context, _) => const EntradasPage(),
       ),
+
       GoRoute(
         path: '/frecuencias',
         builder: (context, _) => const FrecuenciasPage(),
       ),
+
+      // ✅ Settings real
       GoRoute(
         path: '/ajustes',
-        builder: (context, _) => const _SimplePage(title: 'Ajustes'),
+        builder: (context, _) => const SettingsPage(),
+        routes: [
+          // ✅ Subruta: Política de privacidad
+          GoRoute(
+            path: 'privacidad',
+            builder: (context, _) => const PrivacyPolicyPage(),
+          ),
+        ],
       ),
 
       // ✅ Player real
