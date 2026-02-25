@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/audio/audio_controller.dart';
+import '../core/theme/rtt_theme.dart';
 import 'rtt_app_bar.dart';
 import 'rtt_drawer.dart';
 
@@ -23,7 +24,7 @@ class RttScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const RttDrawer(),
-      backgroundColor: const Color(0xFFF3F3F3),
+      backgroundColor: RttColors.background,
       appBar: RttAppBar(
         title: title,
         actions: actions,
@@ -43,8 +44,6 @@ class RttScaffold extends StatelessWidget {
 }
 
 class _MiniPlayerBar extends StatelessWidget {
-  static const Color rttRed = Color(0xFFE53935);
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -52,27 +51,41 @@ class _MiniPlayerBar extends StatelessWidget {
       builder: (context, _) {
         final ctrl = AudioController.instance;
         final playing = ctrl.isPlaying;
+        final buffering = ctrl.isBuffering;
 
-        // Si aún no está init, igual mostramos barra (como app antigua)
         final subtitle = ctrl.programTitle.isNotEmpty ? ctrl.programTitle : 'En directo';
 
         return Material(
           elevation: 10,
           child: Container(
             height: 64,
-            color: rttRed,
+            color: RttColors.red,
             child: Row(
               children: [
                 InkWell(
-                  onTap: () => ctrl.toggle(),
+                  onTap: buffering ? null : () => ctrl.toggle(),
                   child: Container(
                     width: 64,
                     height: 64,
-                    color: const Color(0xFFB71C1C),
-                    child: Icon(
-                      playing ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white,
-                      size: 34,
+                    color: RttColors.darkRed,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: buffering
+                          ? const SizedBox(
+                              key: ValueKey('buffering'),
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(
+                              playing ? Icons.pause : Icons.play_arrow,
+                              key: ValueKey(playing),
+                              color: Colors.white,
+                              size: 34,
+                            ),
                     ),
                   ),
                 ),

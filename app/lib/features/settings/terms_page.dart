@@ -8,14 +8,14 @@ import '../../core/api/endpoints.dart';
 import '../../widgets/rtt_scaffold.dart';
 import '../../widgets/rtt_shimmer.dart';
 
-class PrivacyPolicyPage extends StatefulWidget {
-  const PrivacyPolicyPage({super.key});
+class TermsPage extends StatefulWidget {
+  const TermsPage({super.key});
 
   @override
-  State<PrivacyPolicyPage> createState() => _PrivacyPolicyPageState();
+  State<TermsPage> createState() => _TermsPageState();
 }
 
-class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
+class _TermsPageState extends State<TermsPage> {
   late Future<String> _futureHtml;
 
   @override
@@ -26,10 +26,10 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
 
   Future<String> _fetchHtml() async {
     try {
-      final response = await ApiClient.instance.getRaw(Endpoints.privacyPolicy());
+      final response = await ApiClient.instance.getRaw(Endpoints.termsOfService());
       return response.body;
     } catch (e) {
-      debugPrint('Privacy policy fetch error: $e');
+      debugPrint('Terms of service fetch error: $e');
       rethrow;
     }
   }
@@ -43,15 +43,15 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
 
   void _share() {
     Share.share(
-      Endpoints.privacyPolicy(),
-      subject: 'Política de Privacidad - Radio Tele Taxi',
+      Endpoints.termsOfService(),
+      subject: 'Términos de Servicio - Radio Tele Taxi',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return RttScaffold(
-      title: 'Política de Privacidad',
+      title: 'Términos de Servicio',
       actions: [
         IconButton(
           tooltip: 'Compartir',
@@ -75,7 +75,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
                   const Icon(Icons.error_outline, size: 48),
                   const SizedBox(height: 16),
                   Text(
-                    'No se pudo cargar la política.',
+                    'No se pudieron cargar los términos.',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),

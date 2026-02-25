@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/rtt_theme.dart';
+
 class RttAppBar extends StatelessWidget implements PreferredSizeWidget {
   const RttAppBar({
     super.key,
@@ -16,15 +18,13 @@ class RttAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onClose;
   final List<Widget> actions;
 
-  static const Color rttRed = Color(0xFFE53935);
-
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: rttRed,
+      backgroundColor: RttColors.red,
       elevation: 0,
       leading: showClose
           ? IconButton(
@@ -56,7 +56,7 @@ class RttAppBar extends StatelessWidget implements PreferredSizeWidget {
               'RTT',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
-                color: rttRed,
+                color: RttColors.red,
               ),
             ),
           ),

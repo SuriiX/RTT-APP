@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../core/config/app_config.dart';
+import '../core/theme/rtt_theme.dart';
 
 class RttDrawer extends StatelessWidget {
   const RttDrawer({super.key});
-
-  static const Color rttRed = Color(0xFFE53935);
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
@@ -19,7 +21,7 @@ class RttDrawer extends StatelessWidget {
     required String route,
   }) {
     return ListTile(
-      leading: Icon(icon, color: rttRed),
+      leading: Icon(icon, color: RttColors.red),
       title: Text(text, style: const TextStyle(fontSize: 18)),
       onTap: () {
         Navigator.of(context).pop();
@@ -37,7 +39,7 @@ class RttDrawer extends StatelessWidget {
           children: [
             // Header rojo como la app antigua
             Container(
-              color: rttRed,
+              color: RttColors.red,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
@@ -58,7 +60,7 @@ class RttDrawer extends StatelessWidget {
                       'RTT',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: rttRed,
+                        color: RttColors.red,
                       ),
                     ),
                   ),
@@ -71,11 +73,9 @@ class RttDrawer extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {}, // luego: favoritos
-                    icon: const Icon(Icons.favorite_border, color: Colors.white),
-                  ),
-                  IconButton(
-                    onPressed: () {}, // luego: compartir
+                    onPressed: () => Share.share(
+                      'Descarga la app de RadioTeleTaxi: https://radioteletaxi.com',
+                    ),
                     icon: const Icon(Icons.ios_share, color: Colors.white),
                   ),
                 ],
@@ -98,36 +98,38 @@ class RttDrawer extends StatelessWidget {
                   const Divider(height: 1),
                   _item(context: context, icon: Icons.wifi_tethering, text: 'Frecuencias', route: '/frecuencias'),
                   const Divider(height: 1),
+                  _item(context: context, icon: Icons.favorite_outline, text: 'Favoritos', route: '/favoritos'),
+                  const Divider(height: 1),
                   _item(context: context, icon: Icons.settings_outlined, text: 'Ajustes', route: '/ajustes'),
                 ],
               ),
             ),
 
-            // Footer social
+            // Footer social (URLs desde AppConfig)
             Container(
-              color: const Color(0xFF4A4A4A),
+              color: RttColors.footerGrey,
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   IconButton(
-                    onPressed: () => _openUrl('https://www.facebook.com/'),
+                    onPressed: () => _openUrl(AppConfig.instance.facebookUrl),
                     icon: const Icon(Icons.facebook, color: Colors.white),
                   ),
                   IconButton(
-                    onPressed: () => _openUrl('https://twitter.com/'),
-                    icon: const Icon(Icons.public, color: Colors.white), // placeholder twitter
+                    onPressed: () => _openUrl(AppConfig.instance.twitterUrl),
+                    icon: const Icon(Icons.public, color: Colors.white),
                   ),
                   IconButton(
-                    onPressed: () => _openUrl('https://www.instagram.com/'),
-                    icon: const Icon(Icons.camera_alt, color: Colors.white), // placeholder IG
+                    onPressed: () => _openUrl(AppConfig.instance.instagramUrl),
+                    icon: const Icon(Icons.camera_alt, color: Colors.white),
                   ),
                   IconButton(
-                    onPressed: () => _openUrl('https://wa.me/34646212121'),
+                    onPressed: () => _openUrl(AppConfig.instance.whatsappUrl),
                     icon: const Icon(Icons.chat, color: Colors.white),
                   ),
                   IconButton(
-                    onPressed: () => _openUrl('https://www.youtube.com/'),
+                    onPressed: () => _openUrl(AppConfig.instance.youtubeUrl),
                     icon: const Icon(Icons.play_circle, color: Colors.white),
                   ),
                 ],

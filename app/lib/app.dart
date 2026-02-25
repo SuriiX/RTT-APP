@@ -1,86 +1,119 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/consent/consent_service.dart';
+import 'core/theme/rtt_theme.dart';
 import 'features/home/home_page.dart';
+import 'features/onboarding/onboarding_page.dart';
 import 'features/player/player_page.dart';
 import 'features/programacion/programacion_page.dart';
 import 'features/frecuencias/frecuencias_page.dart';
 import 'features/entradas/entradas_page.dart';
 import 'features/actualidad/actualidad_page.dart';
 import 'features/actualidad/actualidad_detalle_page.dart';
-import 'widgets/rtt_scaffold.dart';
 import 'features/eventos/eventos_page.dart';
 import 'features/eventos/evento_detalle_page.dart';
+import 'features/favorites/favorites_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/settings/privacy_policy_page.dart';
+import 'features/settings/terms_page.dart';
 
 class RttApp extends StatelessWidget {
   RttApp({super.key});
 
+  static Page<void> _fadePage(Widget child) {
+    return CustomTransitionPage<void>(
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 250),
+    );
+  }
+
   final _router = GoRouter(
+    redirect: (context, state) {
+      final consented = ConsentService.instance.hasConsented;
+      final goingToOnboarding = state.matchedLocation == '/onboarding';
+      if (!consented && !goingToOnboarding) return '/onboarding';
+      if (consented && goingToOnboarding) return '/';
+      return null;
+    },
     routes: [
       GoRoute(
+        path: '/onboarding',
+        pageBuilder: (context, _) => _fadePage(const OnboardingPage()),
+      ),
+      GoRoute(
         path: '/',
-        builder: (context, _) => const HomePage(),
+        pageBuilder: (context, _) => _fadePage(const HomePage()),
       ),
 
       GoRoute(
         path: '/actualidad',
-        builder: (context, _) => const ActualidadPage(),
+        pageBuilder: (context, _) => _fadePage(const ActualidadPage()),
         routes: [
           GoRoute(
             path: ':id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final id = state.pathParameters['id']!;
-              return ActualidadDetallePage(postId: id);
+              return _fadePage(ActualidadDetallePage(postId: id));
             },
           ),
         ],
       ),
       GoRoute(
         path: '/eventos',
-        builder: (context, _) => const EventosPage(),
+        pageBuilder: (context, _) => _fadePage(const EventosPage()),
         routes: [
           GoRoute(
             path: ':id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final id = state.pathParameters['id']!;
-              return EventoDetallePage(eventId: id);
+              return _fadePage(EventoDetallePage(eventId: id));
             },
           ),
         ],
       ),
       GoRoute(
         path: '/programacion',
-        builder: (context, _) => const ProgramacionPage(),
+        pageBuilder: (context, _) => _fadePage(const ProgramacionPage()),
       ),
       GoRoute(
         path: '/entradas',
-        builder: (context, _) => const EntradasPage(),
+        pageBuilder: (context, _) => _fadePage(const EntradasPage()),
       ),
 
       GoRoute(
         path: '/frecuencias',
-        builder: (context, _) => const FrecuenciasPage(),
+        pageBuilder: (context, _) => _fadePage(const FrecuenciasPage()),
+      ),
+
+      GoRoute(
+        path: '/favoritos',
+        pageBuilder: (context, _) => _fadePage(const FavoritesPage()),
       ),
 
       // ✅ Settings real
       GoRoute(
         path: '/ajustes',
-        builder: (context, _) => const SettingsPage(),
+        pageBuilder: (context, _) => _fadePage(const SettingsPage()),
         routes: [
-          // ✅ Subruta: Política de privacidad
           GoRoute(
             path: 'privacidad',
-            builder: (context, _) => const PrivacyPolicyPage(),
+            pageBuilder: (context, _) => _fadePage(const PrivacyPolicyPage()),
+          ),
+          GoRoute(
+            path: 'terminos',
+            pageBuilder: (context, _) => _fadePage(const TermsPage()),
           ),
         ],
       ),
 
-      // ✅ Player real
       GoRoute(
         path: '/player',
-        builder: (context, _) => const PlayerPage(),
+        pageBuilder: (context, _) => _fadePage(const PlayerPage()),
       ),
     ],
   );
@@ -90,22 +123,8 @@ class RttApp extends StatelessWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'RTT APP',
+      theme: rttTheme(),
       routerConfig: _router,
-    );
-  }
-}
-
-class _SimplePage extends StatelessWidget {
-  const _SimplePage({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return RttScaffold(
-      title: title,
-      body: const Center(
-        child: Text('Pendiente de construir'),
-      ),
     );
   }
 }

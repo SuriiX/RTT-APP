@@ -3,10 +3,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/config/app_config.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_error_widget.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_shimmer.dart';
+import '../home/home_repository.dart';
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -16,15 +20,12 @@ class PlayerPage extends StatefulWidget {
 }
 
 class _PlayerPageState extends State<PlayerPage> {
-  final api = ApiClient();
-
-  // Datos reales
-  final String phoneNumber = '934661819';
-  final String whatsappNumber = '34646212121';
+  final _repo = HomeRepository();
 
   bool loading = true;
   Map<String, dynamic>? settings;
   List<dynamic> directo = const [];
+  String? _error;
 
   @override
   void initState() {
@@ -40,25 +41,30 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _load() async {
     try {
-      final s = await api.getMap(Endpoints.settings());
-      final d = await api.getList(Endpoints.directo());
+      final s = await _repo.fetchSettings();
+      final d = await _repo.fetchDirecto();
 
       final url = (s['streaming']?['url'] as String?) ?? '';
       await AudioController.instance.ensureInit(url);
 
+      if (!mounted) return;
       setState(() {
         settings = s;
         directo = d;
         loading = false;
+        _error = null;
       });
 
-      // Actualiza el título del mini-player (programa)
       final dm = _directoMap;
       final programa = (dm?['programa'] ?? 'Radio TeleTaxi').toString();
       AudioController.instance.setProgramTitle(programa);
     } catch (e) {
       debugPrint('Player load error: $e');
-      setState(() => loading = false);
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        loading = false;
+      });
     }
   }
 
@@ -70,11 +76,11 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Future<void> _call() async {
-    await launchUrl(Uri.parse('tel:$phoneNumber'), mode: LaunchMode.externalApplication);
+    await launchUrl(Uri.parse('tel:${AppConfig.instance.phoneNumber}'), mode: LaunchMode.externalApplication);
   }
 
   Future<void> _openWhatsapp() async {
-    await launchUrl(Uri.parse('https://wa.me/$whatsappNumber'), mode: LaunchMode.externalApplication);
+    await launchUrl(Uri.parse(AppConfig.instance.whatsappUrl), mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -103,100 +109,128 @@ class _PlayerPageState extends State<PlayerPage> {
         ),
       ],
       body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 28, 18, 20),
-              child: Column(
-                children: [
-                  _avatar(avatarUrl),
-                  const SizedBox(height: 18),
+          ? const RttShimmerPlayer()
+          : _error != null
+              ? RttErrorWidget(message: _error!, onRetry: _load)
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(18, 28, 18, 20),
+                    child: Column(
+                      children: [
+                        _avatar(avatarUrl),
+                        const SizedBox(height: 18),
 
-                  if (hora.isNotEmpty)
-                    Text(
-                      '$hora h',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFE53935),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                  const SizedBox(height: 6),
-                  Text(
-                    programa,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w300,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 6),
-                  if (presentador.trim().isNotEmpty)
-                    Text(
-                      presentador,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFE53935),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                  const SizedBox(height: 22),
-
-                  // Play/Pause grande sincronizado
-                  AnimatedBuilder(
-                    animation: AudioController.instance,
-                    builder: (context, _) {
-                      final ctrl = AudioController.instance;
-                      final playing = ctrl.isPlaying;
-
-                      return SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Color(0xFFE53935), width: 1.5),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        if (hora.isNotEmpty)
+                          Text(
+                            '$hora h',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: RttColors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          onPressed: () => ctrl.toggle(),
-                          icon: Icon(
-                            playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                            color: const Color(0xFFE53935),
-                            size: 26,
+
+                        const SizedBox(height: 6),
+                        Text(
+                          programa,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w300,
+                            color: Colors.black87,
                           ),
-                          label: Text(
-                            playing ? 'PAUSAR DIRECTO' : 'ESCUCHAR DIRECTO',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      );
-                    },
-                  ),
 
-                  const SizedBox(height: 18),
+                        const SizedBox(height: 6),
+                        if (presentador.trim().isNotEmpty)
+                          Text(
+                            presentador,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: RttColors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
 
-                  _actionButton(
-                    icon: Icons.phone,
-                    text: 'Llamar en directo',
-                    color: const Color(0xFF4A4A4A),
-                    onTap: _call,
-                  ),
+                        const SizedBox(height: 22),
 
-                  _actionButton(
-                    icon: Icons.chat,
-                    text: 'Whatsapp',
-                    color: const Color(0xFF25D366),
-                    onTap: _openWhatsapp,
+                        // Play/Pause grande sincronizado
+                        AnimatedBuilder(
+                          animation: AudioController.instance,
+                          builder: (context, _) {
+                            final ctrl = AudioController.instance;
+                            final playing = ctrl.isPlaying;
+                            final buffering = ctrl.isBuffering;
+
+                            return SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  side: const BorderSide(color: RttColors.red, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                onPressed: buffering ? null : () => ctrl.toggle(),
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: buffering
+                                      ? const SizedBox(
+                                          key: ValueKey('buffering'),
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: RttColors.red,
+                                          ),
+                                        )
+                                      : Icon(
+                                          playing ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                                          key: ValueKey(playing),
+                                          color: RttColors.red,
+                                          size: 26,
+                                        ),
+                                ),
+                                label: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Text(
+                                    buffering
+                                        ? 'CARGANDO...'
+                                        : playing
+                                            ? 'PAUSAR DIRECTO'
+                                            : 'ESCUCHAR DIRECTO',
+                                    key: ValueKey(buffering ? 'buf' : playing ? 'pause' : 'play'),
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        _actionButton(
+                          icon: Icons.phone,
+                          text: 'Llamar en directo',
+                          color: RttColors.footerGrey,
+                          onTap: _call,
+                        ),
+
+                        _actionButton(
+                          icon: Icons.chat,
+                          text: 'Whatsapp',
+                          color: const Color(0xFF25D366),
+                          onTap: _openWhatsapp,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 
@@ -206,7 +240,7 @@ class _PlayerPageState extends State<PlayerPage> {
       height: 140,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFE53935), width: 3),
+        border: Border.all(color: RttColors.red, width: 3),
       ),
       child: ClipOval(
         child: CachedNetworkImage(

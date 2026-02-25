@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/api/endpoints.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_animated_list_item.dart';
+import '../../widgets/rtt_error_widget.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_shimmer.dart';
+import 'frecuencias_repository.dart';
 
 class FrecuenciasPage extends StatefulWidget {
   const FrecuenciasPage({super.key});
@@ -12,7 +16,7 @@ class FrecuenciasPage extends StatefulWidget {
 }
 
 class _FrecuenciasPageState extends State<FrecuenciasPage> {
-  final api = ApiClient();
+  final _repo = FrecuenciasRepository();
 
   bool loading = true;
   String? error;
@@ -34,12 +38,13 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
 
   Future<void> _load() async {
     try {
+      if (!mounted) return;
       setState(() {
         loading = true;
         error = null;
       });
 
-      final data = await api.getList(Endpoints.frecuencias());
+      final data = await _repo.fetchFrecuencias();
       final parsed = <Map<String, dynamic>>[];
 
       for (final it in data) {
@@ -76,11 +81,13 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
         }
       }
 
+      if (!mounted) return;
       setState(() {
         rows = parsed;
         loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         error = e.toString();
         loading = false;
@@ -118,13 +125,15 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
         IconButton(
           tooltip: 'Compartir',
           icon: const Icon(Icons.ios_share),
-          onPressed: () {},
+          onPressed: () => Share.share(
+            'Frecuencias RTT: https://radioteletaxi.com/frecuencias',
+          ),
         ),
       ],
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const RttShimmerRows()
           : (error != null)
-              ? Center(child: Text('Error: $error'))
+              ? RttErrorWidget(message: error!, onRetry: _load)
               : _body(),
     );
   }
@@ -132,37 +141,45 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
   Widget _body() {
     final g = grouped;
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        const SizedBox(height: 10),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const SizedBox(height: 10),
 
-        // Texto pequeño arriba (la app vieja lo tiene)
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'donde nos puedes escuchar.',
-            style: TextStyle(color: Colors.black54, fontSize: 15),
+          // Texto pequeño arriba (la app vieja lo tiene)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'donde nos puedes escuchar.',
+              style: TextStyle(color: Colors.black54, fontSize: 15),
+            ),
           ),
-        ),
 
-        const SizedBox(height: 10),
-        const Divider(height: 1),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
 
-        ...g.entries.map((e) {
-          final prov = e.key;
-          final items = e.value;
-          final open = provinceOpen[prov] == true;
+          ...g.entries.toList().asMap().entries.map((entry) {
+            final idx = entry.key;
+            final e = entry.value;
+            final prov = e.key;
+            final items = e.value;
+            final open = provinceOpen[prov] == true;
 
-          return Column(
-            children: [
-              _provinceHeader(prov, open),
-              if (open) ...items.map((r) => _frequencyRow(prov, r)).toList(),
-              const Divider(height: 1),
-            ],
-          );
-        }),
-      ],
+            return RttAnimatedListItem(
+              index: idx,
+              child: Column(
+              children: [
+                _provinceHeader(prov, open),
+                if (open) ...items.map((r) => _frequencyRow(prov, r)).toList(),
+                const Divider(height: 1),
+              ],
+            ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -177,7 +194,7 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
             // Icono tipo "mapa" rojo (simple)
             SizedBox(
               width: 34,
-              child: Icon(Icons.map_outlined, color: const Color(0xFFE53935), size: 26),
+              child: Icon(Icons.map_outlined, color: RttColors.red, size: 26),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -190,7 +207,7 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
             // Chevron rojo
             Icon(
               open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              color: const Color(0xFFE53935),
+              color: RttColors.red,
               size: 28,
             ),
           ],
@@ -221,8 +238,8 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
                   width: 60,
                   child: Text(
                     freq,
-                    style: const TextStyle(
-                      color: Color(0xFFE53935),
+                    style: TextStyle(
+                      color: RttColors.red,
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                     ),
@@ -281,13 +298,13 @@ class _FrecuenciasPageState extends State<FrecuenciasPage> {
       height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFE53935), width: 2),
+        border: Border.all(color: RttColors.red, width: 2),
       ),
       child: Center(
         child: Icon(
           open ? Icons.remove : Icons.add,
           size: 18,
-          color: const Color(0xFFE53935),
+          color: RttColors.red,
         ),
       ),
     );

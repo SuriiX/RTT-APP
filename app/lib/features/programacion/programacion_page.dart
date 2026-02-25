@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/api/endpoints.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../core/audio/audio_controller.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_error_widget.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_scale_tap.dart';
+import '../../widgets/rtt_shimmer.dart';
+import 'programacion_repository.dart';
 
 class ProgramacionPage extends StatefulWidget {
   const ProgramacionPage({super.key});
@@ -14,7 +19,7 @@ class ProgramacionPage extends StatefulWidget {
 }
 
 class _ProgramacionPageState extends State<ProgramacionPage> {
-  final api = ApiClient();
+  final _repo = ProgramacionRepository();
 
   bool loading = true;
   String? error;
@@ -40,17 +45,19 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
 
   Future<void> _load() async {
     try {
+      if (!mounted) return;
       setState(() {
         loading = true;
         error = null;
       });
 
-      final data = await api.getList(Endpoints.programacion());
+      final data = await _repo.fetchProgramacion();
       Map<String, dynamic>? root;
       if (data.isNotEmpty && data.first is Map) {
         root = Map<String, dynamic>.from(data.first as Map);
       }
 
+      if (!mounted) return;
       setState(() {
         lv = (root?['lv'] is List) ? (root!['lv'] as List) : const [];
         sab = (root?['s'] is List) ? (root!['s'] as List) : const [];
@@ -58,6 +65,7 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
         loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         error = e.toString();
         loading = false;
@@ -122,13 +130,15 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
         IconButton(
           tooltip: 'Compartir',
           icon: const Icon(Icons.ios_share),
-          onPressed: () {},
+          onPressed: () => Share.share(
+            'Programación RTT: https://radioteletaxi.com/programacion',
+          ),
         ),
       ],
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const RttShimmerRows()
           : (error != null)
-              ? Center(child: Text('Error: $error'))
+              ? RttErrorWidget(message: error!, onRetry: _load)
               : Column(
                   children: [
                     // ✅ TOP TABS (Lunes–Viernes / Sábado / Domingo)
@@ -140,13 +150,16 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
                     const Divider(height: 1),
 
                     Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: _currentItems.length,
-                        itemBuilder: (context, i) {
-                          final item = _currentItems[i];
-                          return _rowItem(context, item);
-                        },
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: _currentItems.length,
+                          itemBuilder: (context, i) {
+                            final item = _currentItems[i];
+                            return _rowItem(context, item);
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -156,7 +169,7 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
 
   Widget _topTabs() {
     return Container(
-      color: const Color(0xFFE53935),
+      color: RttColors.red,
       padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
@@ -183,7 +196,7 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFD81B60) : Colors.transparent,
+            color: active ? RttColors.accent : Colors.transparent,
           ),
           child: Text(
             label,
@@ -202,7 +215,7 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
     final labels = const ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
     return Container(
-      color: const Color(0xFFE53935),
+      color: RttColors.red,
       child: Row(
         children: List.generate(labels.length, (i) {
           final active = lvDayTab == i;
@@ -213,7 +226,7 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFD81B60) : const Color(0xFFE53935),
+                  color: active ? RttColors.accent : RttColors.red,
                 ),
                 child: Text(
                   labels[i],
@@ -311,10 +324,10 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
                         ),
                       if (live) ...[
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'EN DIRECTO',
                           style: TextStyle(
-                            color: Color(0xFFE53935),
+                            color: RttColors.red,
                             fontWeight: FontWeight.w900,
                             fontSize: 12,
                           ),
@@ -332,11 +345,11 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
                     height: 34,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE53935), width: 2),
+                      border: Border.all(color: RttColors.red, width: 2),
                     ),
                     child: Icon(
                       isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: const Color(0xFFE53935),
+                      color: RttColors.red,
                       size: 22,
                     ),
                   ),
@@ -369,26 +382,34 @@ class _ProgramacionPageState extends State<ProgramacionPage> {
                 const SizedBox(height: 12),
 
                 // Botón "Escuchar" / abrir player
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE53935),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      AudioController.instance.setProgramTitle(
-                        titulo.isNotEmpty ? titulo : 'Radio TeleTaxi',
-                      );
-                      context.go('/player');
-                    },
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text(
-                      'Escuchar',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                RttScaleTap(
+                  onTap: () {
+                    AudioController.instance.setProgramTitle(
+                      titulo.isNotEmpty ? titulo : 'Radio TeleTaxi',
+                    );
+                    context.go('/player');
+                  },
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: RttColors.red,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        AudioController.instance.setProgramTitle(
+                          titulo.isNotEmpty ? titulo : 'Radio TeleTaxi',
+                        );
+                        context.go('/player');
+                      },
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text(
+                        'Escuchar',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                 ),

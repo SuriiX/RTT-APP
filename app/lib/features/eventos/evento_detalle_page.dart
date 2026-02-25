@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../core/favorites/favorites_service.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_error_widget.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_shimmer.dart';
 import 'evento_model.dart';
 import 'eventos_repository.dart';
 import 'eventos_share.dart';
@@ -21,9 +25,7 @@ class _EventoDetallePageState extends State<EventoDetallePage> {
   @override
   void initState() {
     super.initState();
-    repo = EventosRepository(
-      baseUrl: 'https://radioteletaxi.com/app-rest/v1',
-    );
+    repo = EventosRepository();
     future = repo.fetchEventoById(widget.eventId);
   }
 
@@ -31,21 +33,38 @@ class _EventoDetallePageState extends State<EventoDetallePage> {
   Widget build(BuildContext context) {
     return RttScaffold(
       title: 'Evento',
+      actions: [
+        AnimatedBuilder(
+          animation: FavoritesService.instance,
+          builder: (context, _) {
+            final isFav = FavoritesService.instance.isFavorite(
+                FavoriteType.evento, widget.eventId);
+            return IconButton(
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  key: ValueKey(isFav),
+                  color: isFav ? Colors.white : Colors.white70,
+                ),
+              ),
+              tooltip: isFav ? 'Quitar de favoritos' : 'Guardar en favoritos',
+              onPressed: () => FavoritesService.instance
+                  .toggleFavorite(FavoriteType.evento, widget.eventId),
+            );
+          },
+        ),
+      ],
       body: FutureBuilder<Evento>(
         future: future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const RttShimmerDetail();
           }
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'No se pudo cargar el evento.\n${snap.error}',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            return RttErrorWidget(
+              message: snap.error.toString(),
+              onRetry: () => setState(() { future = repo.fetchEventoById(widget.eventId); }),
             );
           }
           if (snap.data == null) {
@@ -62,8 +81,6 @@ class _EventoDetalleBody extends StatelessWidget {
   const _EventoDetalleBody({required this.evento});
   final Evento evento;
 
-  static const _rttRed = Color(0xFFE53935);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -73,21 +90,24 @@ class _EventoDetalleBody extends StatelessWidget {
       children: [
         // --- Imagen ---
         if (evento.imageUrl.isNotEmpty)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: CachedNetworkImage(
-              imageUrl: evento.imageUrl,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                height: 220,
-                color: Colors.black12,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                height: 220,
-                color: Colors.black12,
-                child: const Icon(Icons.broken_image, size: 48, color: Colors.black26),
+          Hero(
+            tag: 'evento-img-${evento.id}',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: CachedNetworkImage(
+                imageUrl: evento.imageUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  height: 220,
+                  color: Colors.black12,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  height: 220,
+                  color: Colors.black12,
+                  child: const Icon(Icons.broken_image, size: 48, color: Colors.black26),
+                ),
               ),
             ),
           ),
@@ -162,8 +182,8 @@ class _EventoDetalleBody extends StatelessWidget {
             icon: const Icon(Icons.share_outlined),
             label: const Text('COMPARTIR EVENTO'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: _rttRed,
-              side: const BorderSide(color: _rttRed),
+              foregroundColor: RttColors.red,
+              side: const BorderSide(color: RttColors.red),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

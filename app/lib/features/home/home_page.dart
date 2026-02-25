@@ -1,14 +1,19 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/audio/audio_controller.dart';
+import '../../core/config/app_config.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_animated_list_item.dart';
+import '../../widgets/rtt_error_widget.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_scale_tap.dart';
+import '../../widgets/rtt_shimmer.dart';
+import 'home_repository.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,32 +23,51 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final api = ApiClient();
+  final _repo = HomeRepository();
   late Future<Map<String, dynamic>> future;
-
-  // Datos reales
-  final String phoneNumber = '934661819';
-  final String whatsappNumber = '34646212121';
-
-  String _lastProgramTitle = '';
 
   @override
   void initState() {
     super.initState();
-    future = api.getMap(Endpoints.home());
+    future = _repo.fetchHome();
+    future.then(_onHomeLoaded).catchError((_) {});
     _initPlayer();
-    AudioController.instance.attach(); // importante para audio_service
+    AudioController.instance.attach();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      future = _repo.fetchHome();
+    });
+    future.then(_onHomeLoaded).catchError((_) {});
+    await future;
+  }
+
+  void _onHomeLoaded(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final directo = data['directo'];
+    final d = (directo is List && directo.isNotEmpty && directo.first is Map)
+        ? directo.first as Map
+        : null;
+    final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
+    if (programa.trim().isNotEmpty) {
+      AudioController.instance.setProgramTitle(programa);
+    }
   }
 
   Future<void> _initPlayer() async {
     try {
-      final settings = await api.getMap(Endpoints.settings());
-      final url = (settings['streaming']?['url'] as String?) ?? '';
-      await AudioController.instance.ensureInit(url);
+      final settings = await _repo.fetchSettings();
 
-      // Autoplay: solo nativo (web suele bloquear autoplay)
-      if (!kIsWeb) {
-        await AudioController.instance.play();
+      // Inicializar config centralizada (phone, whatsapp, social URLs)
+      AppConfig.init(settings);
+
+      final url = AppConfig.instance.streamingUrl;
+      if (url.isNotEmpty) {
+        await AudioController.instance.ensureInit(url);
+        if (!kIsWeb) {
+          await AudioController.instance.play();
+        }
       }
     } catch (e) {
       debugPrint('Init player error: $e');
@@ -51,7 +75,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openWhatsapp() async {
-    final uri = Uri.parse('https://wa.me/$whatsappNumber');
+    final uri = Uri.parse(AppConfig.instance.whatsappUrl);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
@@ -114,7 +138,7 @@ class _HomePageState extends State<HomePage> {
         IconButton(
           tooltip: 'Llamar',
           icon: const Icon(Icons.phone),
-          onPressed: () => launchUrl(Uri.parse('tel:$phoneNumber'),
+          onPressed: () => launchUrl(Uri.parse('tel:${AppConfig.instance.phoneNumber}'),
               mode: LaunchMode.externalApplication),
         ),
         IconButton(
@@ -127,26 +151,22 @@ class _HomePageState extends State<HomePage> {
         future: future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const RttShimmerHome();
           }
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+            return RttErrorWidget(
+              message: snap.error.toString(),
+              onRetry: _refresh,
+            );
           }
 
           final data = snap.data ?? {};
           final directo = data['directo'];
           final actualidad = data['actualidad'];
 
-          final d = (directo is List && directo.isNotEmpty)
+          final d = (directo is List && directo.isNotEmpty && directo.first is Map)
               ? (directo.first as Map)
               : null;
-
-          final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
-          if (programa.trim().isNotEmpty && programa != _lastProgramTitle) {
-            _lastProgramTitle = programa;
-            // No lo hagas en build directamente sin control
-            scheduleMicrotask(() => AudioController.instance.setProgramTitle(programa));
-          }
 
           final heroImage = (() {
             final a = (d?['imagen_app_programa'] ?? '').toString().trim();
@@ -156,36 +176,39 @@ class _HomePageState extends State<HomePage> {
             return Endpoints.cover();
           })();
 
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 110),
-            children: [
-              _hero(context, d, heroImage),
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 110),
+              children: [
+                _hero(context, d, heroImage),
 
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _sectionTitle('ACCESOS RÁPIDOS'),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _quickActions(context),
-              ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _sectionTitle('ACCESOS RÁPIDOS'),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _quickActions(context),
+                ),
 
-              const SizedBox(height: 22),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(child: _headlineRed('ACTUALIDAD')),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 22),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(child: _headlineRed('ACTUALIDAD')),
+                ),
+                const SizedBox(height: 14),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _newsList(actualidad),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _newsList(actualidad),
+                ),
 
-              const SizedBox(height: 10),
-            ],
+                const SizedBox(height: 10),
+              ],
+            ),
           );
         },
       ),
@@ -200,7 +223,7 @@ class _HomePageState extends State<HomePage> {
       style: const TextStyle(
         fontSize: 26,
         fontWeight: FontWeight.bold,
-        color: Color(0xFFE53935),
+        color: RttColors.red,
         letterSpacing: 0.6,
       ),
     );
@@ -231,7 +254,7 @@ class _HomePageState extends State<HomePage> {
           icon: Icons.phone,
           title: 'Llamar',
           subtitle: 'En directo',
-          onTap: () => launchUrl(Uri.parse('tel:$phoneNumber'),
+          onTap: () => launchUrl(Uri.parse('tel:${AppConfig.instance.phoneNumber}'),
               mode: LaunchMode.externalApplication),
         ),
         _actionTile(
@@ -262,12 +285,12 @@ class _HomePageState extends State<HomePage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(14),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+    return RttScaleTap(
+      onTap: onTap,
+      child: Material(
+        elevation: 2,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
@@ -276,10 +299,10 @@ class _HomePageState extends State<HomePage> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE53935).withOpacity(0.12),
+                  color: RttColors.red.withAlpha(31),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: const Color(0xFFE53935)),
+                child: Icon(icon, color: RttColors.red),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -322,7 +345,7 @@ class _HomePageState extends State<HomePage> {
           _proImage(url: imageUrl, height: heroHeight),
 
           // overlay rojo
-          Container(color: const Color(0x88E53935)),
+          Container(color: RttColors.red.withAlpha(0x88)),
 
           SafeArea(
             child: Padding(
@@ -348,17 +371,20 @@ class _HomePageState extends State<HomePage> {
                     Text('Con $pres', style: const TextStyle(color: Colors.white)),
                   ],
                   const SizedBox(height: 16),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => context.go('/player'),
-                    child: const Text(
-                      'PROGRAMA EN DIRECTO',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  RttScaleTap(
+                    onTap: () => context.go('/player'),
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => context.go('/player'),
+                      child: const Text(
+                        'PROGRAMA EN DIRECTO',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
@@ -399,7 +425,9 @@ class _HomePageState extends State<HomePage> {
         final excerpt = (n['excerpt'] ?? '').toString();
         final date = (n['date'] ?? '').toString();
 
-        return Material(
+        return RttAnimatedListItem(
+          index: i,
+          child: Material(
           elevation: 2,
           borderRadius: BorderRadius.circular(14),
           clipBehavior: Clip.antiAlias,
@@ -430,7 +458,7 @@ class _HomePageState extends State<HomePage> {
                       Text(
                         category.toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFFE53935),
+                          color: RttColors.red,
                           fontSize: 12,
                           letterSpacing: 0.8,
                           fontWeight: FontWeight.w700,
@@ -463,6 +491,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+        ),
         );
       },
     );

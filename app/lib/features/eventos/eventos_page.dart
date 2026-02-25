@@ -1,7 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/favorites/favorites_service.dart';
+import '../../core/theme/rtt_theme.dart';
+import '../../widgets/rtt_animated_list_item.dart';
 import '../../widgets/rtt_scaffold.dart';
+import '../../widgets/rtt_shimmer.dart';
 import 'evento_model.dart';
 import 'eventos_repository.dart';
 import 'eventos_share.dart';
@@ -16,14 +21,32 @@ class EventosPage extends StatefulWidget {
 class _EventosPageState extends State<EventosPage> {
   late final EventosRepository repo;
   late Future<List<Evento>> future;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  List<Evento> _filterEventos(List<Evento> eventos) {
+    if (_searchQuery.isEmpty) return eventos;
+    final q = _searchQuery.toLowerCase();
+    return eventos
+        .where((e) =>
+            e.title.toLowerCase().contains(q) ||
+            e.location.toLowerCase().contains(q))
+        .toList();
+  }
 
   @override
   void initState() {
     super.initState();
 
-    repo = EventosRepository(baseUrl: 'https://radioteletaxi.com/app-rest/v1');
+    repo = EventosRepository();
 
     future = repo.fetchEventos();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -37,56 +60,107 @@ class _EventosPageState extends State<EventosPage> {
   Widget build(BuildContext context) {
     return RttScaffold(
       title: 'Eventos',
-      body: FutureBuilder<List<Evento>>(
-        future: future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Error cargando eventos:\n${snap.error}',
-                  textAlign: TextAlign.center,
-                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: 'Buscar eventos...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: Colors.white,
               ),
-            );
-          }
+              onChanged: (v) => setState(() => _searchQuery = v),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Evento>>(
+              future: future,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const RttShimmerList();
+                }
 
-          final eventos = snap.data ?? [];
-          if (eventos.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                children: const [
-                  SizedBox(height: 120),
-                  Center(child: Text('No hay eventos disponibles')),
-                ],
-              ),
-            );
-          }
+                if (snap.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Error cargando eventos:\n${snap.error}',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
 
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-              itemCount: eventos.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 14),
-              itemBuilder: (context, i) {
-                final e = eventos[i];
-                return _EventoCard(
-                  evento: e,
-                  onTap: () => context.push('/eventos/${e.id}'),
-                  onShare: () => EventosShare.shareEvento(e),
+                final allEventos = snap.data ?? [];
+                final eventos = _filterEventos(allEventos);
+
+                if (allEventos.isEmpty) {
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                      children: const [
+                        SizedBox(height: 120),
+                        Center(
+                            child:
+                                Text('No hay eventos disponibles')),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView.separated(
+                    padding:
+                        const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                    itemCount: eventos.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 14),
+                    itemBuilder: (context, i) {
+                      final e = eventos[i];
+                      return RttAnimatedListItem(
+                        index: i,
+                        child: AnimatedBuilder(
+                        animation: FavoritesService.instance,
+                        builder: (context, _) {
+                          final isFav = FavoritesService.instance.isFavorite(
+                              FavoriteType.evento, e.id);
+                          return _EventoCard(
+                            evento: e,
+                            onTap: () => context.push('/eventos/${e.id}'),
+                            onShare: () => EventosShare.shareEvento(e),
+                            isFav: isFav,
+                            onToggleFav: () => FavoritesService.instance
+                                .toggleFavorite(FavoriteType.evento, e.id),
+                          );
+                        },
+                      ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -97,11 +171,15 @@ class _EventoCard extends StatelessWidget {
     required this.evento,
     required this.onTap,
     required this.onShare,
+    required this.isFav,
+    required this.onToggleFav,
   });
 
   final Evento evento;
   final VoidCallback onTap;
   final VoidCallback onShare;
+  final bool isFav;
+  final VoidCallback onToggleFav;
 
   String _formatDate(DateTime d) {
     final dd = d.day.toString().padLeft(2, '0');
@@ -124,12 +202,16 @@ class _EventoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (evento.imageUrl.isNotEmpty)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  evento.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(height: 140),
+              Hero(
+                tag: 'evento-img-${evento.id}',
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: CachedNetworkImage(
+                    imageUrl: evento.imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(height: 140, color: Colors.black12),
+                    errorWidget: (_, __, ___) => Container(height: 140, color: Colors.black12),
+                  ),
                 ),
               ),
             Padding(
@@ -137,7 +219,7 @@ class _EventoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Fecha + Share (como el icono del header en tu screenshot)
+                  // Fecha + Fav + Share
                   Row(
                     children: [
                       Expanded(
@@ -147,6 +229,15 @@ class _EventoCard extends StatelessWidget {
                                 color: Colors.black54,
                               ),
                         ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          size: 20,
+                          color: isFav ? RttColors.red : Colors.black38,
+                        ),
+                        onPressed: onToggleFav,
+                        tooltip: isFav ? 'Quitar de favoritos' : 'Guardar',
                       ),
                       IconButton(
                         icon: const Icon(Icons.ios_share, size: 20),
@@ -197,7 +288,7 @@ class _RowIconText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.red),
+        Icon(icon, size: 18, color: RttColors.red),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
