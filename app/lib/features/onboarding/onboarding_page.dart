@@ -157,7 +157,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           _featureRow(
             icon: Icons.newspaper_outlined,
             title: 'Actualidad y eventos',
-            subtitle: 'Mantente al dia con las ultimas noticias',
+            subtitle: 'Mantente al día con las últimas noticias',
           ),
           const SizedBox(height: 28),
           _featureRow(
@@ -247,8 +247,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           _consentTile(
             value: _privacyAccepted,
             onChanged: (v) => setState(() => _privacyAccepted = v ?? false),
-            label: 'He leido y acepto la ',
-            linkText: 'Politica de Privacidad',
+            label: 'He leído y acepto la ',
+            linkText: 'Política de Privacidad',
             onLinkTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
             ),
@@ -260,8 +260,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           _consentTile(
             value: _termsAccepted,
             onChanged: (v) => setState(() => _termsAccepted = v ?? false),
-            label: 'He leido y acepto los ',
-            linkText: 'Terminos de Servicio',
+            label: 'He leído y acepto los ',
+            linkText: 'Términos de Servicio',
             onLinkTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const TermsPage()),
             ),
@@ -277,14 +277,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
             title: Text(
-              'Confirmo que tengo 14 anos o mas',
+              'Confirmo que tengo 14 años o más',
               style: TextStyle(
                 fontSize: 15,
                 color: RttColors.textPrimary,
               ),
             ),
             subtitle: Text(
-              'Requisito legal segun la LOPD-GDD',
+              'Requisito legal según la LOPD-GDD',
               style: TextStyle(
                 fontSize: 12,
                 color: RttColors.textSecondary,
