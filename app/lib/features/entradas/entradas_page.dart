@@ -4,34 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
-import '../../widgets/rtt_appbar.dart';
+import '../../widgets/rtt_scaffold.dart';
 
-class EntradasPage extends StatefulWidget {
+class EntradasPage extends StatelessWidget {
   const EntradasPage({super.key});
 
   @override
-  State<EntradasPage> createState() => _EntradasPageState();
-}
-
-class _EntradasPageState extends State<EntradasPage> {
-  final api = ApiClient();
-  late Future<List<dynamic>> future;
-
-  @override
-  void initState() {
-    super.initState();
-    future = api.getList(Endpoints.eventos());
-  }
-
-  Future<void> _openCompra(String url) async {
-    if (url.trim().isEmpty) return;
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: RttAppBar(phoneNumber: '934661819'),
+    return const RttScaffold(
+      title: 'Entradas',
       body: _EntradasBody(),
     );
   }
