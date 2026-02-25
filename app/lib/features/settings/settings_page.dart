@@ -51,8 +51,8 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar mis datos'),
         content: const Text(
-          'Se borraran todos tus datos locales: favoritos, preferencias '
-          'y consentimiento legal.\n\nEsta accion no se puede deshacer.',
+          'Se borrarán todos tus datos locales: favoritos, preferencias '
+          'y consentimiento legal.\n\nEsta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -123,7 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Divider(height: 1),
                 _row(
                   icon: Icons.lock_outline,
-                  title: 'Politica de privacidad',
+                  title: 'Política de privacidad',
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
@@ -132,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Divider(height: 1),
                 _row(
                   icon: Icons.description_outlined,
-                  title: 'Terminos de servicio',
+                  title: 'Términos de servicio',
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TermsPage()),
@@ -140,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
 
                 // ── Información ──
-                _sectionHeader('Informacion'),
+                _sectionHeader('Información'),
                 _row(
                   icon: Icons.info_outline,
                   title: 'Sobre la app',
@@ -172,7 +172,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Divider(height: 1),
                 _row(
                   icon: Icons.article_outlined,
-                  title: 'Licencias de codigo abierto',
+                  title: 'Licencias de código abierto',
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => showLicensePage(
                     context: context,
