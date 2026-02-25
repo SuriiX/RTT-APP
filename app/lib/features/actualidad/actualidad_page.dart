@@ -29,10 +29,7 @@ class _ActualidadPageState extends State<ActualidadPage> {
   void initState() {
     super.initState();
 
-    // ✅ Pon aquí tu base real:
-    // Si ya usas /app-rest/v1/* en producción, normalmente es:
-    // https://radioteletaxi.com/app-rest/v1
-    repo = ActualidadRepository(baseUrl: 'https://radioteletaxi.com/app-rest/v1');
+    repo = ActualidadRepository();
 
     _loadFirst();
 

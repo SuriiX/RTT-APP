@@ -19,7 +19,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final api = ApiClient();
-  late Future<Map<String, dynamic>> future;
 
   // Datos reales
   final String phoneNumber = '934661819';
@@ -27,21 +26,23 @@ class _HomePageState extends State<HomePage> {
 
   String _lastProgramTitle = '';
 
+  // Futures separados: directo + actualidad
+  late Future<List<dynamic>> _directoFuture;
+  late Future<Map<String, dynamic>> _actualidadFuture;
+
   @override
   void initState() {
     super.initState();
-    future = api.getMap(Endpoints.home());
+    _directoFuture = api.getList(Endpoints.directo());
+    _actualidadFuture = api.getMap(Endpoints.actualidad(page: 1, perPage: 4));
     _initPlayer();
-    AudioController.instance.attach(); // importante para audio_service
+    AudioController.instance.attach();
   }
 
   Future<void> _initPlayer() async {
     try {
-      final settings = await api.getMap(Endpoints.settings());
-      final url = (settings['streaming']?['url'] as String?) ?? '';
-      await AudioController.instance.ensureInit(url);
+      await AudioController.instance.ensureInit(Endpoints.streamingUrl);
 
-      // Autoplay: solo nativo (web suele bloquear autoplay)
       if (!kIsWeb) {
         await AudioController.instance.play();
       }
@@ -61,10 +62,6 @@ class _HomePageState extends State<HomePage> {
     return Uri.encodeFull(u);
   }
 
-  /// Imagen PRO:
-  /// - Fondo: cover (llena)
-  /// - Encima: contain (imagen completa sin recorte)
-  /// - Overlay suave
   Widget _proImage({
     required String url,
     required double height,
@@ -123,69 +120,71 @@ class _HomePageState extends State<HomePage> {
           onPressed: () => context.go('/player'),
         ),
       ],
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: future,
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
-          }
+      body: FutureBuilder<List<dynamic>>(
+        future: _directoFuture,
+        builder: (context, directoSnap) {
+          return FutureBuilder<Map<String, dynamic>>(
+            future: _actualidadFuture,
+            builder: (context, actualidadSnap) {
+              // Mostrar loading si ambos aún están cargando
+              if (directoSnap.connectionState == ConnectionState.waiting &&
+                  actualidadSnap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final data = snap.data ?? {};
-          final directo = data['directo'];
-          final actualidad = data['actualidad'];
+              final directo = directoSnap.data;
+              final actualidad = actualidadSnap.data;
 
-          final d = (directo is List && directo.isNotEmpty)
-              ? (directo.first as Map)
-              : null;
+              final d = (directo is List && directo.isNotEmpty)
+                  ? (directo.first as Map)
+                  : null;
 
-          final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
-          if (programa.trim().isNotEmpty && programa != _lastProgramTitle) {
-            _lastProgramTitle = programa;
-            // No lo hagas en build directamente sin control
-            scheduleMicrotask(() => AudioController.instance.setProgramTitle(programa));
-          }
+              final programa = (d?['programa'] ?? 'Radio TeleTaxi').toString();
+              if (programa.trim().isNotEmpty && programa != _lastProgramTitle) {
+                _lastProgramTitle = programa;
+                scheduleMicrotask(() => AudioController.instance.setProgramTitle(programa));
+              }
 
-          final heroImage = (() {
-            final a = (d?['imagen_app_programa'] ?? '').toString().trim();
-            if (a.isNotEmpty) return a;
-            final b = (d?['imagen_reproductor_web'] ?? '').toString().trim();
-            if (b.isNotEmpty) return b;
-            return Endpoints.cover();
-          })();
+              final heroImage = (() {
+                final a = (d?['imagen_app_programa'] ?? '').toString().trim();
+                if (a.isNotEmpty) return a;
+                final b = (d?['imagen_reproductor_web'] ?? '').toString().trim();
+                if (b.isNotEmpty) return b;
+                return Endpoints.cover();
+              })();
 
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 110),
-            children: [
-              _hero(context, d, heroImage),
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 110),
+                children: [
+                  _hero(context, d, heroImage),
 
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _sectionTitle('ACCESOS RÁPIDOS'),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _quickActions(context),
-              ),
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _sectionTitle('ACCESOS RAPIDOS'),
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _quickActions(context),
+                  ),
 
-              const SizedBox(height: 22),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(child: _headlineRed('ACTUALIDAD')),
-              ),
-              const SizedBox(height: 14),
+                  const SizedBox(height: 22),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Center(child: _headlineRed('ACTUALIDAD')),
+                  ),
+                  const SizedBox(height: 14),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _newsList(actualidad),
-              ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _newsList(actualidad),
+                  ),
 
-              const SizedBox(height: 10),
-            ],
+                  const SizedBox(height: 10),
+                ],
+              );
+            },
           );
         },
       ),
@@ -237,12 +236,12 @@ class _HomePageState extends State<HomePage> {
         _actionTile(
           icon: Icons.chat,
           title: 'WhatsApp',
-          subtitle: 'Escríbenos',
+          subtitle: 'Escribenos',
           onTap: _openWhatsapp,
         ),
         _actionTile(
           icon: Icons.schedule,
-          title: 'Programación',
+          title: 'Programacion',
           subtitle: 'Ver horarios',
           onTap: () => context.go('/programacion'),
         ),
@@ -372,8 +371,8 @@ class _HomePageState extends State<HomePage> {
 
   // ---------- NEWS LIST ----------
 
-  Widget _newsList(dynamic actualidad) {
-    final news = (actualidad is Map && actualidad['news'] is List)
+  Widget _newsList(Map<String, dynamic>? actualidad) {
+    final news = (actualidad != null && actualidad['news'] is List)
         ? (actualidad['news'] as List)
         : <dynamic>[];
 

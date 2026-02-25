@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../widgets/rtt_scaffold.dart';
@@ -14,15 +15,12 @@ class EventosPage extends StatefulWidget {
 }
 
 class _EventosPageState extends State<EventosPage> {
-  late final EventosRepository repo;
+  final repo = EventosRepository();
   late Future<List<Evento>> future;
 
   @override
   void initState() {
     super.initState();
-
-    repo = EventosRepository(baseUrl: 'https://radioteletaxi.com/app-rest/v1');
-
     future = repo.fetchEventos();
   }
 
@@ -103,17 +101,8 @@ class _EventoCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onShare;
 
-  String _formatDate(DateTime d) {
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    final yyyy = d.year.toString();
-    return '$dd/$mm/$yyyy';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final location = evento.isPrivate ? 'Privat' : evento.location;
-
     return Material(
       elevation: 2,
       borderRadius: BorderRadius.circular(14),
@@ -123,13 +112,13 @@ class _EventoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (evento.imageUrl.isNotEmpty)
+            if (evento.featuredImage.isNotEmpty)
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  evento.imageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: evento.featuredImage,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(height: 140),
+                  errorWidget: (_, __, ___) => const SizedBox(height: 140),
                 ),
               ),
             Padding(
@@ -137,12 +126,11 @@ class _EventoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Fecha + Share (como el icono del header en tu screenshot)
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          _formatDate(evento.date),
+                          evento.fechaInicio,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.black54,
                               ),
@@ -168,14 +156,14 @@ class _EventoCard extends StatelessWidget {
 
                   _RowIconText(
                     icon: Icons.location_on,
-                    text: location,
+                    text: evento.lugar.isNotEmpty ? evento.lugar : 'Por confirmar',
                   ),
                   const SizedBox(height: 8),
 
-                  if (evento.priceText.isNotEmpty)
+                  if (evento.precioDisplay.isNotEmpty)
                     _RowIconText(
                       icon: Icons.local_activity,
-                      text: evento.priceText,
+                      text: evento.precioDisplay,
                     ),
                 ],
               ),

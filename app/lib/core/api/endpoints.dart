@@ -1,8 +1,10 @@
 class Endpoints {
-  static const String baseUrl = 'https://radioteletaxi.com/rtt-app/v1';
+  static const String baseUrl = 'https://radioteletaxi.com/app-rest/v1';
 
-  static String home() => '$baseUrl/home';
-  static String settings() => '$baseUrl/settings';
+  /// URL de streaming (redirige al .mp3 real)
+  static const String streamingUrl =
+      'https://radiott-web.streaming-pro.com:6103/radiott.mp3';
+
   static String directo() => '$baseUrl/directo';
   static String cover() => '$baseUrl/cover.jpg';
 

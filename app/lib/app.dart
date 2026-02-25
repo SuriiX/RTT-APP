@@ -8,7 +8,6 @@ import 'features/frecuencias/frecuencias_page.dart';
 import 'features/entradas/entradas_page.dart';
 import 'features/actualidad/actualidad_page.dart';
 import 'features/actualidad/actualidad_detalle_page.dart';
-import 'widgets/rtt_scaffold.dart';
 import 'features/eventos/eventos_page.dart';
 import 'features/eventos/evento_detalle_page.dart';
 import 'features/settings/settings_page.dart';
@@ -95,17 +94,3 @@ class RttApp extends StatelessWidget {
   }
 }
 
-class _SimplePage extends StatelessWidget {
-  const _SimplePage({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return RttScaffold(
-      title: title,
-      body: const Center(
-        child: Text('Pendiente de construir'),
-      ),
-    );
-  }
-}

@@ -20,11 +20,7 @@ class _ActualidadDetallePageState extends State<ActualidadDetallePage> {
   @override
   void initState() {
     super.initState();
-    repo = ActualidadRepository(baseUrl: 'https://radioteletaxi.com/app-rest/v1');
-
-    // Tu endpoint no tiene "by id", así que:
-    // ✅ estrategia rápida: pedir 1 página grande y buscar el ID.
-    // (Luego si quieres te hago endpoint /actualidadv2/:id en WP y queda perfecto)
+    repo = ActualidadRepository();
     future = _loadById(widget.postId);
   }
 

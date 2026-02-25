@@ -23,7 +23,6 @@ class _PlayerPageState extends State<PlayerPage> {
   final String whatsappNumber = '34646212121';
 
   bool loading = true;
-  Map<String, dynamic>? settings;
   List<dynamic> directo = const [];
 
   @override
@@ -40,19 +39,14 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _load() async {
     try {
-      final s = await api.getMap(Endpoints.settings());
       final d = await api.getList(Endpoints.directo());
-
-      final url = (s['streaming']?['url'] as String?) ?? '';
-      await AudioController.instance.ensureInit(url);
+      await AudioController.instance.ensureInit(Endpoints.streamingUrl);
 
       setState(() {
-        settings = s;
         directo = d;
         loading = false;
       });
 
-      // Actualiza el título del mini-player (programa)
       final dm = _directoMap;
       final programa = (dm?['programa'] ?? 'Radio TeleTaxi').toString();
       AudioController.instance.setProgramTitle(programa);
@@ -89,7 +83,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final presentador = (d?['presentador'] ?? '').toString();
 
     final imgPresentador = (d?['imagen_presentador'] ?? '').toString().trim();
-    final coverFallback = (settings?['streaming']?['cover'] ?? Endpoints.cover()).toString().trim();
+    final coverFallback = Endpoints.cover();
 
     final avatarUrl = imgPresentador.isNotEmpty ? imgPresentador : coverFallback;
 
