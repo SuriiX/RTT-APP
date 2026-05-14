@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(test:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(flutter run:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(\"C:/Users/Admin/Documents/GitHub/RTT-APP/.claude/worktrees/jolly-colden/app/lib/features/actualidad/actualidad_page.dart\":*)",
+      "Bash(where:*)",
+      "Bash(/tmp/edit_file2.js:*)",
+      "Bash(node:*)",
+      "Bash(/tmp/check_crlf.js:*)",
+      "Bash(/tmp/edit_file1_v2.js:*)",
+      "Bash(/tmp/edit_file2_v2.js:*)",
+      "Bash(python3:*)",
+      "Bash(echo:*)",
+      "Bash(python:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)"
+    ]
+  }
+}
