@@ -80,49 +80,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Logo RTT grande
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(99),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(40),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'RTT',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 32,
-                color: RttColors.red,
-                letterSpacing: 1.5,
-              ),
-            ),
+          Image.asset(
+            'assets/branding/logo_rtt_onboarding.png',
+            width: 220,
+            fit: BoxFit.contain,
+            semanticLabel: 'RadioTeleTaxi',
           ),
           const SizedBox(height: 28),
-          const Text(
-            'RadioTeleTaxi',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 12),
           Text(
             'Tu radio, en tu bolsillo',
             style: TextStyle(
               fontSize: 17,
-              color: Colors.white.withAlpha(200),
-              fontWeight: FontWeight.w400,
+              color: Colors.white.withAlpha(220),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

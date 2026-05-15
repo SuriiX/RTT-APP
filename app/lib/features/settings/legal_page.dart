@@ -9,24 +9,25 @@ import '../../widgets/rtt_shimmer.dart';
 
 /// Pantalla genérica para mostrar documentos legales (privacidad / términos).
 ///
-/// Estrategia de carga:
-///  1. Intenta descargar el HTML público (`remoteUrl`).
-///  2. Si la URL devuelve 4xx/5xx o hay error de red, cae al asset
-///     local (`fallbackAsset`) — así la app NUNCA se queda sin política
-///     de privacidad, incluso si el WordPress está caído.
-///  3. El usuario puede compartir el enlace público.
+/// Modos de carga:
+///  - Si [remoteUrl] es `null`: la pantalla es 100 % estática. Sólo lee
+///    [fallbackAsset] del bundle y nunca toca la red. Útil para documentos
+///    que deben mostrarse igual aunque el WordPress esté caído (p. ej.
+///    Política de Privacidad — exigido por las stores).
+///  - Si [remoteUrl] no es `null`: intenta descargar el HTML público;
+///    ante cualquier error de red o status 4xx/5xx cae al asset local.
 class LegalPage extends StatefulWidget {
   const LegalPage({
     super.key,
     required this.title,
-    required this.remoteUrl,
     required this.fallbackAsset,
+    this.remoteUrl,
     this.shareSubject,
   });
 
   final String title;
-  final String remoteUrl;
   final String fallbackAsset;
+  final String? remoteUrl;
   final String? shareSubject;
 
   @override
@@ -43,13 +44,18 @@ class _LegalPageState extends State<LegalPage> {
   }
 
   Future<_LegalContent> _load() async {
+    final url = widget.remoteUrl;
+    if (url == null) {
+      // Modo estático puro: nunca tocamos la red.
+      final html = await rootBundle.loadString(widget.fallbackAsset);
+      return _LegalContent(html: html, fromFallback: false);
+    }
     try {
-      final response = await ApiClient.instance.getRaw(widget.remoteUrl);
+      final response = await ApiClient.instance.getRaw(url);
       final body = response.body.trim();
       if (body.isEmpty) throw const ApiException('Respuesta vacía');
       return _LegalContent(html: body, fromFallback: false);
     } catch (_) {
-      // Cualquier error de red o status → fallback offline.
       final html = await rootBundle.loadString(widget.fallbackAsset);
       return _LegalContent(html: html, fromFallback: true);
     }
@@ -63,22 +69,23 @@ class _LegalPageState extends State<LegalPage> {
   }
 
   void _share() {
-    Share.share(
-      widget.remoteUrl,
-      subject: widget.shareSubject ?? widget.title,
-    );
+    final url = widget.remoteUrl;
+    if (url == null) return;
+    Share.share(url, subject: widget.shareSubject ?? widget.title);
   }
 
   @override
   Widget build(BuildContext context) {
+    final canShare = widget.remoteUrl != null;
     return RttScaffold(
       title: widget.title,
       actions: [
-        IconButton(
-          tooltip: 'Compartir',
-          icon: const Icon(Icons.ios_share),
-          onPressed: _share,
-        ),
+        if (canShare)
+          IconButton(
+            tooltip: 'Compartir',
+            icon: const Icon(Icons.ios_share),
+            onPressed: _share,
+          ),
       ],
       body: FutureBuilder<_LegalContent>(
         future: _future,
