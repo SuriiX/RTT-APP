@@ -29,6 +29,7 @@ Notas internas que cualquier agente Claude debe leer al empezar a trabajar en es
 
 - [PLAY_STORE_CHECKLIST.md](PLAY_STORE_CHECKLIST.md) — bloqueadores y estado para Play.
 - [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) — bloqueadores y estado para App Store.
+- [IOS_BUILD_INSTRUCCIONES.md](IOS_BUILD_INSTRUCCIONES.md) — pasos exactos en el Mac (pod install, signing, archive).
 - [INSTRUCCIONES_RESET_UPLOAD_KEY.md](INSTRUCCIONES_RESET_UPLOAD_KEY.md) — paso a paso para Owner del cliente.
 - [MENSAJE_AL_CLIENTE.md](MENSAJE_AL_CLIENTE.md) — texto listo para enviar.
 
