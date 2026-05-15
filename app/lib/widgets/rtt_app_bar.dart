@@ -52,35 +52,11 @@ class _LogoTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'RTT',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: RttColors.red,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          'RadioTeleTaxi',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/branding/logo_rtt.png',
+      height: 36,
+      fit: BoxFit.contain,
+      semanticLabel: 'RadioTeleTaxi',
     );
   }
 }
