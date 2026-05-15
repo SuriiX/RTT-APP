@@ -1,0 +1,10 @@
+# Keystore artifacts at repo root — NEVER commit
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+key.properties
+
+# Local Claude worktree artifacts
+.claude/sessions/

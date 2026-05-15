@@ -1,29 +1,53 @@
+/// Endpoints del backend de Radio TeleTaxi.
+///
+/// El backend expone los datos a través de dos plugins WordPress:
+///   • `rtt-app-api`        → API de contenido (`/app-rest/v1/*`)
+///   • `rtt-mediastream`    → BBDD espejo de Mediastream (sólo lectura cuando
+///                            el plugin exponga endpoints públicos; los nombres
+///                            previstos se documentan abajo).
 class Endpoints {
   Endpoints._();
 
-  /// Base URL para la API principal de la app (home, settings, directo, etc.)
-  static const String baseUrl = 'https://radioteletaxi.com/rtt-app/v1';
+  /// Base de la API de contenido (plugin `rtt-app-api`).
+  static const String baseApp = 'https://radioteletaxi.com/app-rest/v1';
 
-  /// Base URL para la API REST de contenido (actualidad, eventos)
-  static const String baseUrlRest = 'https://radioteletaxi.com/app-rest/v1';
+  /// Base prevista para el plugin `rtt-mediastream` cuando exponga
+  /// endpoints públicos de shows/episodios para la sección "A la carta".
+  /// Hasta entonces los servicios que la usen devolverán listas vacías
+  /// y la UI muestra estado vacío.
+  static const String baseMediastream = 'https://radioteletaxi.com/wp-json/rtt-mediastream/v1';
 
-  // ── API principal ──
-  static String home() => '$baseUrl/home';
-  static String settings() => '$baseUrl/settings';
-  static String directo() => '$baseUrl/directo';
-  static String cover() => '$baseUrl/cover.jpg';
-  static String programacion() => '$baseUrl/programacion';
-  static String frecuencias() => '$baseUrl/frecuencias';
-
-  // ── API REST (contenido WordPress) ──
+  // ── Contenido principal ──
+  static String directo() => '$baseApp/directo';
+  static String programacion() => '$baseApp/programacion';
+  static String frecuencias() => '$baseApp/frecuencias';
   static String actualidadList({int page = 1, int perPage = 10}) =>
-      '$baseUrlRest/actualidadv2?page=$page&per_page=$perPage';
-  static String eventosList() => '$baseUrlRest/eventos';
-  static String eventoById(String id) => '$baseUrlRest/eventos/$id';
+      '$baseApp/actualidadv2?page=$page&per_page=$perPage';
+  static String eventosList() => '$baseApp/eventos';
 
-  // ── Páginas web ──
+  // ── Streaming en directo ──
+  /// Devuelve 302 al URL real del icecast en Mediastream.
+  /// http.Client sigue redirects por defecto, así que basta con apuntar aquí.
+  static String streamAndroid() => '$baseApp/streaming-android';
+  static String streamIos() => '$baseApp/streaming-ios';
+
+  // ── Cover del directo ──
+  static String cover() => '$baseApp/cover.jpg';
+
+  // ── A la carta (Mediastream mirror) ──
+  // Los nombres están previstos según la convención del plugin. Cuando el
+  // cliente publique los endpoints, sólo hay que ajustar las rutas si difieren.
+  static String alaCartaShows() => '$baseMediastream/shows';
+  static String alaCartaShowById(String id) => '$baseMediastream/shows/$id';
+  static String alaCartaShowEpisodes(String id) =>
+      '$baseMediastream/shows/$id/episodes';
+  static String alaCartaU7d() => '$baseMediastream/u7d';
+
+  // ── Páginas web (legal) ──
+  // La política oficial está en /politica-de-privacidad/ del WordPress.
+  // Si la página cae, la app cae a un fallback offline empaquetado.
   static String privacyPolicy() =>
-      'https://radioteletaxi.com/politica-de-privacidad-app/';
+      'https://radioteletaxi.com/politica-de-privacidad/';
   static String termsOfService() =>
       'https://radioteletaxi.com/terminos-de-uso-app/';
 }

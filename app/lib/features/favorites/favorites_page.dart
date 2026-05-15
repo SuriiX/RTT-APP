@@ -22,7 +22,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   late final TabController _tabCtrl;
 
   final _actualidadRepo = ActualidadRepository();
-  final _eventosRepo = EventosRepository();
+  final _eventosRepo = EventosRepository.instance;
   final _favs = FavoritesService.instance;
 
   List<Noticia> _noticias = [];
