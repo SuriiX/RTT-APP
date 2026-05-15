@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+	<!-- =======================================================
+	     RadioTeleTaxi App · Privacy Manifest
+	     Obligatorio para envío a App Store desde primavera 2024.
+	     https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
+	     ======================================================= -->
+
+	<!-- 1) ¿La app realiza tracking publicitario de usuarios o dispositivos?
+	     No. La app no integra SDK de analytics, no recoge IDFA, no agrega datos
+	     a redes publicitarias. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<!-- 2) Dominios usados para tracking. Vacío, no hacemos tracking. -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- 3) Tipos de datos recolectados. Ninguno. Toda la persistencia es local
+	     en el dispositivo (UserDefaults / SharedPreferences) y no abandona el
+	     dispositivo del usuario. Las peticiones HTTP a radioteletaxi.com y
+	     mdstrm.com son técnicas (descarga de contenido, streaming) y no se
+	     vinculan a una identidad de usuario. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!-- 4) APIs sensibles que las dependencias usan internamente.
+	     Cada entrada declara una "razón aprobada" por Apple. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+
+		<!-- shared_preferences usa NSUserDefaults para favoritos, consentimiento,
+		     preferencia de notificaciones, etc. Sólo dentro del propio sandbox
+		     de la app. Razón aprobada: 1C8F.1 "Access info from same app, per
+		     documentation". -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+
+		<!-- cached_network_image guarda imágenes en disco y consulta sus
+		     timestamps para decidir si están vigentes. Razón aprobada:
+		     C617.1 "Access timestamps, size, or other metadata of files inside
+		     the app container". -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+
+		<!-- just_audio / cached_network_image pueden consultar el espacio
+		     disponible para decidir si pueden cachear más contenido. Razón
+		     aprobada: E174.1 "Check whether sufficient disk space is available
+		     to write files". -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+
+		<!-- just_audio y audio_service usan mach_absolute_time / boot time
+		     internamente para calcular tiempos de reproducción y eventos del
+		     AVFoundation. Razón aprobada: 35F9.1 "Calculate event timestamps
+		     for AVFoundation events". -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+
+	</array>
+
+</dict>
+</plist>

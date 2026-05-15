@@ -1,0 +1,14 @@
+# Copia este fichero como `key.properties` (mismo directorio) y rellena con tus datos.
+# NUNCA subas key.properties ni el .jks al repositorio.
+#
+# 1) Generar keystore (una sola vez, guárdalo a buen recaudo + backup cifrado):
+#    keytool -genkey -v -keystore rtt-release.jks -keyalg RSA -keysize 2048 \
+#            -validity 10000 -alias rtt
+#
+# 2) Mover rtt-release.jks fuera del repo (ej. ~/keystores/rtt-release.jks)
+#    y referenciarlo en storeFile con ruta absoluta.
+
+storePassword=CAMBIAR
+keyPassword=CAMBIAR
+keyAlias=rtt
+storeFile=/ruta/absoluta/a/rtt-release.jks
