@@ -15,9 +15,9 @@ publish_to: 'none'
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # versionName.versionCode — la app en producción está en 2.0.63 (20063).
-# Esta release lleva refactor completo de UI, A la Carta scrapeado, fallback legal
+# Esta release: refactor de UI según mocks, A la Carta scrapeado, fallback legal
 # offline, signing config, ProGuard y migración al backend /app-rest/v1.
-version: 2.1.0+20100
+version: 2.0.73+20073
 
 environment:
   sdk: ^3.11.0
