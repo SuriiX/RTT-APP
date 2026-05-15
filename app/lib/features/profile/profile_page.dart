@@ -2,26 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/consent/consent_service.dart';
 import '../../core/favorites/favorites_service.dart';
 import '../../core/theme/rtt_theme.dart';
 import '../../widgets/rtt_scaffold.dart';
-import 'privacy_policy_page.dart';
-import 'terms_page.dart';
 
-class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+/// Pantalla "Mi Perfil": acceso a favoritos, programación, frecuencias,
+/// preferencias de notificaciones, legales y eliminación de datos (GDPR).
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _ProfilePageState extends State<ProfilePage> {
   static const _kNotifsKey = 'rtt_notifications_enabled';
 
-  bool loading = true;
-  bool enabled = true;
+  bool _loading = true;
+  bool _notifsEnabled = true;
 
   @override
   void initState() {
@@ -31,19 +33,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _load() async {
     final sp = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
-      enabled = sp.getBool(_kNotifsKey) ?? true;
-      loading = false;
+      _notifsEnabled = sp.getBool(_kNotifsKey) ?? true;
+      _loading = false;
     });
   }
 
-  Future<void> _setEnabled(bool v) async {
+  Future<void> _setNotifs(bool v) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setBool(_kNotifsKey, v);
-    setState(() => enabled = v);
+    setState(() => _notifsEnabled = v);
   }
-
-  // --------------- DELETE DATA ---------------
 
   void _confirmDelete() {
     showDialog(
@@ -51,8 +52,8 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar mis datos'),
         content: const Text(
-          'Se borrarán todos tus datos locales: favoritos, preferencias '
-          'y consentimiento legal.\n\nEsta acción no se puede deshacer.',
+          'Se borrarán todos tus datos locales: favoritos, preferencias y '
+          'consentimiento legal.\n\nEsta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -62,7 +63,7 @@ class _SettingsPageState extends State<SettingsPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _deleteAllData();
+              _deleteAll();
             },
             style: FilledButton.styleFrom(backgroundColor: RttColors.red),
             child: const Text('Eliminar'),
@@ -72,75 +73,118 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _deleteAllData() async {
-    // 1. Limpiar servicios
+  Future<void> _deleteAll() async {
     await FavoritesService.instance.clearAll();
     await ConsentService.instance.clearConsent();
-
-    // 2. Limpiar todo SharedPreferences (notifs, etc.)
     final sp = await SharedPreferences.getInstance();
     await sp.clear();
 
     if (!mounted) return;
-
-    // 3. Feedback + redirigir al onboarding
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Datos eliminados correctamente')),
     );
     context.go('/onboarding');
   }
 
-  // --------------- BUILD ---------------
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
     return RttScaffold(
-      title: 'Ajustes',
+      title: 'Mi Perfil',
       actions: [
         IconButton(
-          tooltip: 'Compartir',
+          tooltip: 'Compartir la app',
           icon: const Icon(Icons.ios_share),
           onPressed: () => Share.share(
             'Descarga la app de RadioTeleTaxi: https://radioteletaxi.com',
           ),
         ),
       ],
-      body: loading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
-                // ── General ──
-                _sectionHeader('General'),
+                _section('Contenidos'),
+                _row(
+                  icon: Icons.favorite_outline,
+                  title: 'Favoritos',
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/perfil/favoritos'),
+                ),
+                const Divider(height: 1),
+                _row(
+                  icon: Icons.schedule,
+                  title: 'Programación',
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/programacion'),
+                ),
+                const Divider(height: 1),
+                _row(
+                  icon: Icons.radio_outlined,
+                  title: 'Frecuencias',
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/frecuencias'),
+                ),
+
+                _section('Síguenos'),
+                _row(
+                  icon: Icons.facebook,
+                  title: 'Facebook',
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _open(AppConfig.instance.facebookUrl),
+                ),
+                const Divider(height: 1),
+                _row(
+                  icon: Icons.alternate_email,
+                  title: 'X / Twitter',
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _open(AppConfig.instance.twitterUrl),
+                ),
+                const Divider(height: 1),
+                _row(
+                  icon: Icons.camera_alt_outlined,
+                  title: 'Instagram',
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _open(AppConfig.instance.instagramUrl),
+                ),
+                const Divider(height: 1),
+                _row(
+                  icon: Icons.play_circle_outline,
+                  title: 'YouTube',
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _open(AppConfig.instance.youtubeUrl),
+                ),
+
+                _section('General'),
                 _row(
                   icon: Icons.notifications_none,
                   title: 'Notificaciones',
                   trailing: Switch(
-                    value: enabled,
-                    onChanged: _setEnabled,
+                    value: _notifsEnabled,
+                    onChanged: _setNotifs,
                   ),
-                  onTap: () => _setEnabled(!enabled),
+                  onTap: () => _setNotifs(!_notifsEnabled),
                 ),
                 const Divider(height: 1),
                 _row(
                   icon: Icons.lock_outline,
                   title: 'Política de privacidad',
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
-                  ),
+                  onTap: () => context.push('/perfil/privacidad'),
                 ),
                 const Divider(height: 1),
                 _row(
                   icon: Icons.description_outlined,
-                  title: 'Términos de servicio',
+                  title: 'Términos de uso',
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TermsPage()),
-                  ),
+                  onTap: () => context.push('/perfil/terminos'),
                 ),
 
-                // ── Información ──
-                _sectionHeader('Información'),
+                _section('Información'),
                 _row(
                   icon: Icons.info_outline,
                   title: 'Sobre la app',
@@ -149,24 +193,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     context: context,
                     applicationName: 'RadioTeleTaxi',
                     applicationVersion: '1.0.0',
-                    applicationLegalese: '\u00a9 2025 Radio Tele Taxi',
-                    applicationIcon: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: RttColors.red,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'RTT',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                    applicationLegalese: '© 2026 Radio Tele Taxi',
                   ),
                 ),
                 const Divider(height: 1),
@@ -178,12 +205,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     context: context,
                     applicationName: 'RadioTeleTaxi',
                     applicationVersion: '1.0.0',
-                    applicationLegalese: '\u00a9 2025 Radio Tele Taxi',
+                    applicationLegalese: '© 2026 Radio Tele Taxi',
                   ),
                 ),
 
-                // ── Datos ──
-                _sectionHeader('Datos'),
+                _section('Datos'),
                 _row(
                   icon: Icons.delete_outline,
                   title: 'Eliminar mis datos',
@@ -191,19 +217,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: _confirmDelete,
                   destructive: true,
                 ),
+                const SizedBox(height: 24),
               ],
             ),
     );
   }
 
-  // --------------- HELPERS ---------------
-
-  Widget _sectionHeader(String title) {
+  Widget _section(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
@@ -223,25 +248,21 @@ class _SettingsPageState extends State<SettingsPage> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
           children: [
             SizedBox(
               width: 38,
-              child: Icon(
-                icon,
-                color: destructive ? RttColors.red : RttColors.red,
-                size: 26,
-              ),
+              child: Icon(icon, color: RttColors.red, size: 24),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 17,
                   color: destructive ? RttColors.red : null,
-                  fontWeight: destructive ? FontWeight.w600 : null,
+                  fontWeight: destructive ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ),
