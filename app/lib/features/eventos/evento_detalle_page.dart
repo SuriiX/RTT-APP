@@ -19,13 +19,12 @@ class EventoDetallePage extends StatefulWidget {
 }
 
 class _EventoDetallePageState extends State<EventoDetallePage> {
-  late final EventosRepository repo;
+  final EventosRepository repo = EventosRepository.instance;
   late Future<Evento> future;
 
   @override
   void initState() {
     super.initState();
-    repo = EventosRepository();
     future = repo.fetchEventoById(widget.eventId);
   }
 

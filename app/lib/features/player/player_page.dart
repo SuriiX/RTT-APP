@@ -23,7 +23,6 @@ class _PlayerPageState extends State<PlayerPage> {
   final _repo = HomeRepository();
 
   bool loading = true;
-  Map<String, dynamic>? settings;
   List<dynamic> directo = const [];
   String? _error;
 
@@ -41,15 +40,13 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Future<void> _load() async {
     try {
-      final s = await _repo.fetchSettings();
       final d = await _repo.fetchDirecto();
 
-      final url = (s['streaming']?['url'] as String?) ?? '';
-      await AudioController.instance.ensureInit(url);
+      // El servidor responde con un 302 al icecast real, http.Client sigue redirects.
+      await AudioController.instance.ensureInit(Endpoints.streamAndroid());
 
       if (!mounted) return;
       setState(() {
-        settings = s;
         directo = d;
         loading = false;
         _error = null;
@@ -95,7 +92,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final presentador = (d?['presentador'] ?? '').toString();
 
     final imgPresentador = (d?['imagen_presentador'] ?? '').toString().trim();
-    final coverFallback = (settings?['streaming']?['cover'] ?? Endpoints.cover()).toString().trim();
+    final coverFallback = Endpoints.cover();
 
     final avatarUrl = imgPresentador.isNotEmpty ? imgPresentador : coverFallback;
 
