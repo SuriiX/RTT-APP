@@ -136,7 +136,28 @@ class _EntradasBodyState extends State<_EntradasBody> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Text('$fecha · $lugar', style: const TextStyle(color: Colors.black54)),
+                          if (fecha.trim().isNotEmpty)
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_outlined, size: 14, color: Colors.black54),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(fecha, style: const TextStyle(color: Colors.black54)),
+                                ),
+                              ],
+                            ),
+                          if (lugar.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, size: 14, color: Colors.black54),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(lugar, style: const TextStyle(color: Colors.black54)),
+                                ),
+                              ],
+                            ),
+                          ],
                           if (precio.trim().isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Text(precio, style: const TextStyle(fontWeight: FontWeight.w600)),
