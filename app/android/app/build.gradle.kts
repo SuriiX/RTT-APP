@@ -17,7 +17,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.radioteletaxi.lonuestro"
+    namespace = "com.radioteletaxi.myapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -32,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.radioteletaxi.lonuestro"
+        applicationId = "com.radioteletaxi.myapp"
         // minSdk 23 es requerido por just_audio / audio_service en Android moderno.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion

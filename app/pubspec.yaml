@@ -15,7 +15,7 @@ publish_to: 'none'
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # versionName.versionCode
-# Esta variante de la app (applicationId com.radioteletaxi.lonuestro) es una
+# Esta variante de la app (applicationId com.radioteletaxi.myapp) es una
 # app NUEVA en Play Console, paralela a "Radio TeleTaxi - Oficial". Empieza
 # en 1.0.0+1 porque para Google es una app distinta. Misma base de codigo,
 # mismo backend, firmada con el keystore que controlamos por completo

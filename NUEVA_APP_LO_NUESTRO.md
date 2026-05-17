@@ -1,4 +1,4 @@
-# App nueva: "RTT Lo Nuestro" (com.radioteletaxi.lonuestro)
+# App nueva: "RTT Lo Nuestro" (com.radioteletaxi.myapp)
 
 ## Contexto
 
@@ -16,8 +16,8 @@ La app actual "Radio TeleTaxi - Oficial" (`com.radioteletaxi.app`, 19.400 usuari
 
 | Campo | Valor |
 |---|---|
-| **applicationId Android** | `com.radioteletaxi.lonuestro` |
-| **Bundle ID iOS / macOS** | `com.radioteletaxi.lonuestro` |
+| **applicationId Android** | `com.radioteletaxi.myapp` |
+| **Bundle ID iOS / macOS** | `com.radioteletaxi.myapp` |
 | **Nombre visible** | `RTT Lo Nuestro` |
 | **versionName + versionCode iniciales** | `1.0.0+1` |
 | **Keystore de firma** | `C:\Users\Admin\AndroidKeystores\rtt-release.jks` |
@@ -32,7 +32,7 @@ La app actual "Radio TeleTaxi - Oficial" (`com.radioteletaxi.app`, 19.400 usuari
 
 1. **Play Console → Crear app** (no es una actualización de la existente).
 2. **Nombre**: "RTT Lo Nuestro" (o el que prefieras — el listing es independiente del original).
-3. **Package name**: `com.radioteletaxi.lonuestro`.
+3. **Package name**: `com.radioteletaxi.myapp`.
 4. **Política de privacidad URL**: `https://radioteletaxi.com/politica-de-privacidad/` (misma URL, sigue valiendo).
 5. **Data Safety form**: idéntico al de la app original (Internet + audio en foreground + preferencias locales, sin recolección de datos personales).
 6. **Categoría**: Música.
@@ -63,7 +63,7 @@ Funcionalmente son intercambiables. Si en el futuro recuperamos el `.jks` origin
 
 ---
 
-## Por qué `com.radioteletaxi.lonuestro` y no otra cosa
+## Por qué `com.radioteletaxi.myapp` y no otra cosa
 
 - Encaja con el tagline "Lo Nuestro" del logo (visible en la imagen del cliente).
 - No es `app2`, `beta`, ni `new` → no transmite que es algo provisional.
