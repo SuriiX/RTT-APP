@@ -16,7 +16,7 @@
 			<string>ca</string>
 		</array>
 		<key>CFBundleDisplayName</key>
-		<string>RadioTeleTaxi</string>
+		<string>RTT Lo Nuestro</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -24,7 +24,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>RadioTeleTaxi</string>
+		<string>RTTLoNuestro</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>

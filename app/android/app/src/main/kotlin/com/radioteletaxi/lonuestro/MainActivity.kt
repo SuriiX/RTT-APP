@@ -1,4 +1,4 @@
-package com.radioteletaxi.app
+package com.radioteletaxi.lonuestro
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
